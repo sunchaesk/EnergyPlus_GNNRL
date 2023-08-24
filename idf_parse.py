@@ -159,7 +159,7 @@ def get_surface_to_zone_dict(parsed_idf) -> dict:
     ret_dict = dict()
     building_surfaces = parsed_idf['BUILDINGSURFACE:DETAILED']
     fenestration_surfaces = parsed_idf['FENESTRATIONSURFACE:DETAILED']
-    print('fen surf:', fenestration_surfaces)
+    #print('fen surf:', fenestration_surfaces)
     #print('building_surfaces', building_surfaces)
 
     # filter ignorable surfaces (eg.Adiabatic)
@@ -238,6 +238,7 @@ def directed_zone_connections(parsed_idf) -> list:
 
     # get surface_to_surface connection dict
     surface_connect_surface = get_surface_connect_surface(parsed_idf)
+    # print(surface_connect_surface)
 
     # get zone_list
     zone_list = get_zone_list(parsed_idf)
@@ -245,6 +246,8 @@ def directed_zone_connections(parsed_idf) -> list:
     zone_connection_dict = dict()
     zone_connection_list = []
     for surface in surface_to_zone.keys():
+        if 'window' in surface.lower():
+            continue
         start_zone = surface_to_zone[surface]
 
         connected_surface = surface_connect_surface[surface]
@@ -253,17 +256,17 @@ def directed_zone_connections(parsed_idf) -> list:
         # case 3: connecte_surface is Outdoors
         if connected_surface == "Outdoors":
             #zone_connection_dict[start_zone] = 'Outdoors'
-            zone_connection_list.append([start_zone, 'Outdoors'])
+            zone_connection_list.append(tuple([start_zone, 'Outdoors']))
         elif connected_surface == "Ground":
             #zone_connection_dict[start_zone] = 'Ground'
-            zone_connection_list.append([start_zone, 'Ground'])
+            zone_connection_list.append(tuple([start_zone, 'Ground']))
         elif connected_surface in zone_list:
             #zone_connection_dict[start_zone] = connected_surface # it would be "connected_zone" for this case
-            zone_connection_list.append([start_zone, connected_surface])
+            zone_connection_list.append(tuple([start_zone, connected_surface]))
         else:
             end_zone = surface_to_zone[surface_connect_surface[surface]]
             #zone_connection_dict[start_zone] = end_zone
-            zone_connection_list.append([start_zone, end_zone])
+            zone_connection_list.append(tuple([start_zone, end_zone]))
 
     return zone_connection_list
 
@@ -272,11 +275,11 @@ def directed_to_undirected_zone(directed_list):
     @param: directed_list - list that represents the zone connections as a directed graph
     directed_list: List[List(str, str)]
     '''
-    undirected_graph = []
+    undirected_graph = list()
     for connection in directed_list:
         start, end = connection
-        undirected_graph.append([start, end])
-        undirected_graph.append([end, start])
+        undirected_graph.append(tuple([start, end]))
+        undirected_graph.append(tuple([end, start]))
 
     return list(undirected_graph)
 
@@ -298,6 +301,28 @@ def generate_connections(idf_f_path: str):
     f = idf_file.read()
     res = parse(f)
     return main(res)
+
+def _generate_adjacency(res):
+    '''
+    input: parsed idf
+    '''
+    edges_list = main(res)
+    adjacency_list = {}
+    # Convert the list of edges into an adjacency list dictionary
+    for edge in edges_list:
+        node1, node2 = edge
+        if node1 not in adjacency_list:
+            adjacency_list[node1] = []
+        if node2 not in adjacency_list:
+            adjacency_list[node2] = []
+
+        adjacency_list[node1].append(node2)
+        adjacency_list[node2].append(node1)
+
+    for zone in adjacency_list:
+        adjacency_list[zone] = list(set(adjacency_list[zone]))
+
+    return adjacency_list
 
 def generate_adjacency(idf_f_path: str):
     edges_list: list = generate_connections(idf_f_path)
@@ -423,6 +448,21 @@ def generate_variables(parsed_idf):
 
 def gnn_coo_generate(parsed_idf):
     zone_to_number_dict = gnn_zone_numbering_dict(parsed_idf)
+    connections_list = list(set(tuple(main(parsed_idf))))
+    temp_list = []
+    a = []
+    b = []
+    for connection in connections_list:
+        temp_list.append(tuple([zone_to_number_dict[connection[0]], zone_to_number_dict[connection[1]]]))
+
+    for numbered_connection in temp_list:
+        a.append(numbered_connection[0])
+        b.append(numbered_connection[1])
+    #print(temp_list)
+
+    print(a, b)
+    return [a, b]
+
 
 def gnn_zone_to_variables(parsed_idf):
     pass
@@ -435,20 +475,21 @@ def gnn_zone_numbering_dict(parsed_idf):
     ret_dict = dict()
     ret_dict['Outdoors'] = 0
     ret_dict['Ground'] = 1
+    zone_list = get_zone_list(parsed_idf)
+    for i in range(len(zone_list)):
+        ret_dict[zone_list[i]] = i + 2
+    #print(zone_list)
+    return ret_dict
 
 if __name__ == "__main__":
     # idf_file = open('./5ZoneAirCooledConvCoef.idf', 'r')
-    idf_file = open('./in.idf', 'r')
+    idf_file = open('./single_zone.idf', 'r')
     f = idf_file.read()
     res = parse(f)
 
+    gnn_coo_generate(res)
 
-    print('------------------')
-    for i in range(10):
-        temp = get_zone_list(res)
-        print(temp)
-    print('------------------')
-
+    #print(json.dumps(gnn_zone_numbering_dict(res), indent=4))
 
     # temp = get_surface_connect_surface(res)
     # temp = generate_variables(res)
@@ -456,8 +497,8 @@ if __name__ == "__main__":
     # print('len:', len(temp))
 
 
-    l2 = main(res)
-    visualize_connections(l2)
+    # l2 = main(res)
+    # visualize_connections(l2)
     #pp.pprint(l2)
 
     #print(json.dumps(get_surface_to_zone_dict(res), indent=4))
