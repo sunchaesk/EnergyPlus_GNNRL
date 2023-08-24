@@ -1,0 +1,108 @@
+
+Conversion 9.0 => 9.1
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+   ** Warning ** Object=Sizing:System, name=PSZ-AC:1, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:System, name=PSZ-AC:2, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:System, name=PSZ-AC:3, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:System, name=PSZ-AC:4, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Sizing:System, name=PSZ-AC:5, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** IP: IDF line~3986 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3992 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3998 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~4004 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~4010 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+
+Conversion 9.1 => 9.2
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+   ** Warning ** IP: IDF line~3886 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3892 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3898 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3904 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3910 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+
+Conversion 9.2 => 9.3
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+   ** Warning ** IP: IDF line~3886 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3892 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3898 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3904 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+   ** Warning ** IP: IDF line~3910 Obsolete object=AirTerminal:SingleDuct:Uncontrolled, encountered.  Should be replaced with new object=AirTerminal:SingleDuct:ConstantVolume:NoReheat
+
+Conversion 9.3 => 9.4
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+
+Conversion 9.4 => 9.5
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+
+Conversion 9.5 => 9.6
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+
+Conversion 9.6 => 22.1
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+
+Conversion 22.1 => 22.2
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+
+Conversion 22.2 => 23.1
+ Starting new Transition.audit
+ Will create new full IDFs
+ Will create new IDF lines with units where applicable
+ Will create new IDF lines leaving blank incoming fields as blank (no default fill)
+ Processing IDF -- /home/ck/Downloads/RL_GNN/in.idf
+   ** Warning ** Object=Coil:Cooling:DX:SingleSpeed, name=PSZ-AC:1 Heat Pump DX Cooling Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Cooling:DX:SingleSpeed, name=PSZ-AC:2 Heat Pump DX Cooling Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Cooling:DX:SingleSpeed, name=PSZ-AC:3 Heat Pump DX Cooling Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Cooling:DX:SingleSpeed, name=PSZ-AC:4 Heat Pump DX Cooling Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Cooling:DX:SingleSpeed, name=PSZ-AC:5 Heat Pump DX Cooling Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=PSZ-AC:1 Heat Pump DX Heating Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=PSZ-AC:2 Heat Pump DX Heating Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=PSZ-AC:3 Heat Pump DX Heating Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=PSZ-AC:4 Heat Pump DX Heating Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.
+   ** Warning ** Object=Coil:Heating:DX:SingleSpeed, name=PSZ-AC:5 Heat Pump DX Heating Coil, entered with less than minimum number of fields.
+   **   ~~~   ** Attempting fill to minimum.

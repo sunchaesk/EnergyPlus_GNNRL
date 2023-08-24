@@ -1,0 +1,160 @@
+Created by PLY version 3.11 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> idffile
+Rule 1     idffile -> idfobjectlist
+Rule 2     idfobjectlist -> idfobject
+Rule 3     idfobjectlist -> idfobject idfobjectlist
+Rule 4     idfobject -> objectname SEMICOLON
+Rule 5     idfobject -> objectname COMMA valuelist SEMICOLON
+Rule 6     objectname -> VALUE
+Rule 7     valuelist -> VALUE
+Rule 8     valuelist -> VALUE COMMA valuelist
+
+Terminals, with rules where they appear
+
+COMMA                : 5 8
+SEMICOLON            : 4 5
+VALUE                : 6 7 8
+error                : 
+
+Nonterminals, with rules where they appear
+
+idffile              : 0
+idfobject            : 2 3
+idfobjectlist        : 1 3
+objectname           : 4 5
+valuelist            : 5 8
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . idffile
+    (1) idffile -> . idfobjectlist
+    (2) idfobjectlist -> . idfobject
+    (3) idfobjectlist -> . idfobject idfobjectlist
+    (4) idfobject -> . objectname SEMICOLON
+    (5) idfobject -> . objectname COMMA valuelist SEMICOLON
+    (6) objectname -> . VALUE
+
+    VALUE           shift and go to state 5
+
+    idffile                        shift and go to state 1
+    idfobjectlist                  shift and go to state 2
+    idfobject                      shift and go to state 3
+    objectname                     shift and go to state 4
+
+state 1
+
+    (0) S' -> idffile .
+
+
+
+state 2
+
+    (1) idffile -> idfobjectlist .
+
+    $end            reduce using rule 1 (idffile -> idfobjectlist .)
+
+
+state 3
+
+    (2) idfobjectlist -> idfobject .
+    (3) idfobjectlist -> idfobject . idfobjectlist
+    (2) idfobjectlist -> . idfobject
+    (3) idfobjectlist -> . idfobject idfobjectlist
+    (4) idfobject -> . objectname SEMICOLON
+    (5) idfobject -> . objectname COMMA valuelist SEMICOLON
+    (6) objectname -> . VALUE
+
+    $end            reduce using rule 2 (idfobjectlist -> idfobject .)
+    VALUE           shift and go to state 5
+
+    idfobject                      shift and go to state 3
+    idfobjectlist                  shift and go to state 6
+    objectname                     shift and go to state 4
+
+state 4
+
+    (4) idfobject -> objectname . SEMICOLON
+    (5) idfobject -> objectname . COMMA valuelist SEMICOLON
+
+    SEMICOLON       shift and go to state 7
+    COMMA           shift and go to state 8
+
+
+state 5
+
+    (6) objectname -> VALUE .
+
+    SEMICOLON       reduce using rule 6 (objectname -> VALUE .)
+    COMMA           reduce using rule 6 (objectname -> VALUE .)
+
+
+state 6
+
+    (3) idfobjectlist -> idfobject idfobjectlist .
+
+    $end            reduce using rule 3 (idfobjectlist -> idfobject idfobjectlist .)
+
+
+state 7
+
+    (4) idfobject -> objectname SEMICOLON .
+
+    VALUE           reduce using rule 4 (idfobject -> objectname SEMICOLON .)
+    $end            reduce using rule 4 (idfobject -> objectname SEMICOLON .)
+
+
+state 8
+
+    (5) idfobject -> objectname COMMA . valuelist SEMICOLON
+    (7) valuelist -> . VALUE
+    (8) valuelist -> . VALUE COMMA valuelist
+
+    VALUE           shift and go to state 10
+
+    valuelist                      shift and go to state 9
+
+state 9
+
+    (5) idfobject -> objectname COMMA valuelist . SEMICOLON
+
+    SEMICOLON       shift and go to state 11
+
+
+state 10
+
+    (7) valuelist -> VALUE .
+    (8) valuelist -> VALUE . COMMA valuelist
+
+    SEMICOLON       reduce using rule 7 (valuelist -> VALUE .)
+    COMMA           shift and go to state 12
+
+
+state 11
+
+    (5) idfobject -> objectname COMMA valuelist SEMICOLON .
+
+    VALUE           reduce using rule 5 (idfobject -> objectname COMMA valuelist SEMICOLON .)
+    $end            reduce using rule 5 (idfobject -> objectname COMMA valuelist SEMICOLON .)
+
+
+state 12
+
+    (8) valuelist -> VALUE COMMA . valuelist
+    (7) valuelist -> . VALUE
+    (8) valuelist -> . VALUE COMMA valuelist
+
+    VALUE           shift and go to state 10
+
+    valuelist                      shift and go to state 13
+
+state 13
+
+    (8) valuelist -> VALUE COMMA valuelist .
+
+    SEMICOLON       reduce using rule 8 (valuelist -> VALUE COMMA valuelist .)
+
