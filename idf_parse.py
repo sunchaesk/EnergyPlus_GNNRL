@@ -411,7 +411,7 @@ def generate_zone_sky_diffuse_solar(parsed_idf):
     surface_to_zone_dict = get_surface_to_zone_dict(parsed_idf)
     #print(surface_to_zone_dict)
     for solar_surface in solar_surface_list:
-        var_name = 'var-' + str(solar_surface).lower() + ':' + surface_to_zone_dict[solar_surface] + '-sky_diffuse_solar'
+        var_name = 'var-' + str(solar_surface).lower() + ':' + surface_to_zone_dict[solar_surface].lower() + '-sky_diffuse_solar'
         ret[var_name] = ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", solar_surface)
 
     return ret
@@ -465,7 +465,23 @@ def gnn_coo_generate(parsed_idf):
 
 
 def gnn_zone_to_variables(parsed_idf):
-    pass
+    '''
+    return: type dict
+    key: zone
+    val: list of variable handles for each zone
+    '''
+    ret_dict = dict()
+    zone_list = get_zone_list(parsed_idf)
+    variables = generate_variables(parsed_idf)
+    for zone in zone_list:
+        ret_dict[zone] = list()
+
+    for variable_handle in variables:
+        for zone in zone_list:
+            if zone.lower() in variable_handle:
+                ret_dict[zone].append(variable_handle)
+
+    return ret_dict
 
 def gnn_zone_numbering_dict(parsed_idf):
     '''
@@ -483,22 +499,22 @@ def gnn_zone_numbering_dict(parsed_idf):
 
 if __name__ == "__main__":
     # idf_file = open('./5ZoneAirCooledConvCoef.idf', 'r')
-    idf_file = open('./single_zone.idf', 'r')
+    idf_file = open('./in.idf', 'r')
     f = idf_file.read()
     res = parse(f)
 
-    gnn_coo_generate(res)
-
+    # gnn_coo_generate(res)
     #print(json.dumps(gnn_zone_numbering_dict(res), indent=4))
 
     # temp = get_surface_connect_surface(res)
     # temp = generate_variables(res)
+    # temp = gnn_zone_to_variables(res)
     # print(json.dumps(temp, indent=4))
     # print('len:', len(temp))
 
 
-    # l2 = main(res)
-    # visualize_connections(l2)
+    l2 = main(res)
+    visualize_connections(l2)
     #pp.pprint(l2)
 
     #print(json.dumps(get_surface_to_zone_dict(res), indent=4))

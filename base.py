@@ -1,4 +1,5 @@
-# pip uninstalled ''
+
+
 import sys
 import os
 import threading
@@ -16,7 +17,7 @@ import random
 
 import gymnasium as gym
 import numpy as np
-from gymnasium.spaces import Discrete, Box
+from gymnasium.spaces import Discrete, Box, MultiDiscrete
 
 sys.path.insert(0, '/home/ck/Downloads/EnergyPlus-23.1.0-87ed9199d4-Linux-CentOS7.9.2009-x86_64/')
 from pyenergyplus.api import EnergyPlusAPI
@@ -49,16 +50,28 @@ class EnergyPlusRunner:
         # below is declaration of variables, meters and actuators
         # this simulation will interact with
         self.variables = {
-            "outdoor_temp" : ("Site Outdoor Air Drybulb Temperature", "Environment"),
-            "indoor_temp_living" : ("Zone Air Temperature", 'living_unit1'),
-            "mean_radiant_temperature_living": ("Zone Mean Radiant Temperature", "living_unit1"),
-            "relative_humidity_living": ("Zone Air Relative Humidity", "living_unit1"),
-            'sky_diffuse_solar_ldf': ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", 'Window_ldf_1.unit1'),
-            'sky_diffuse_solar_sdr': ("Surface Outside Face Incident Sky Diffuse Solar Radiation Rate per Area", 'Window_sdr_1.unit1'),
+            'site_outdoor_temperature': ("Site Outdoor Air Drybulb Temperature", "Environment"),
+            'site_ground_temperature': ("Site Ground Temperature", "Environment"),
             'site_direct_solar': ("Site Direct Solar Radiation Rate per Area", "Environment"),
+            'site_diffuse_solar': ("Site Diffuse Solar Radiation Rate per Area", "Environment"),
             'site_horizontal_infrared': ("Site Horizontal Infrared Radiation Rate per Area", "Environment"),
+            'Attic_indoor_temperature': ("Zone Air Temperature", "Attic"),
+            'Core_ZN_indoor_temperature': ("Zone Air Temperature", "Core_ZN"),
+            'Perimeter_ZN_1_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_1"),
+            'Perimeter_ZN_2_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_2"),
+            'Perimeter_ZN_3_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_3"),
+            'Perimeter_ZN_4_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_4"),
         }
         self.var_handles: Dict[str, int] = {}
+        self.var_handles_index: Dict[str, int] = {}
+        for i in range(len(self.variables)):
+            self.var_handles_index[list(self.variables.keys())[i]] = i
+
+        print('------------------------')
+        print('------------------------')
+        print(self.var_handles_index)
+        print('------------------------')
+        print('------------------------')
 
         self.meters = {
             "elec_hvac": "Electricity:HVAC",
@@ -69,17 +82,57 @@ class EnergyPlusRunner:
         self.meter_handles: Dict[str, int] = {}
 
         self.actuators = {
-            "cooling_actuator_living" : (
+            "cooling_actuator_Core_ZN" : (
                 "Zone Temperature Control",
                 "Cooling Setpoint",
-                "living_unit1"
+                "Core_ZN"
+            ),
+            "cooling_actuator_Perimeter_ZN_1" : (
+                "Zone Temperature Control",
+                "Cooling Setpoint",
+                "Perimeter_ZN_1"
+            ),
+            "cooling_actuator_Perimeter_ZN_2" : (
+                "Zone Temperature Control",
+                "Cooling Setpoint",
+                "Perimeter_ZN_2"
+            ),
+            "cooling_actuator_Perimeter_ZN_3" : (
+                "Zone Temperature Control",
+                "Cooling Setpoint",
+                "Perimeter_ZN_3"
+            ),
+            "cooling_actuator_Perimeter_ZN_4" : (
+                "Zone Temperature Control",
+                "Cooling Setpoint",
+                "Perimeter_ZN_4"
             ),
 
-            "heating_actuator_living" : (
+            "heating_actuator_Core_ZN" : (
                 "Zone Temperature Control",
                 "Heating Setpoint",
-                "living_unit1"
-            )
+                "Core_ZN"
+            ),
+            "heating_actuator_Perimeter_ZN_1" : (
+                "Zone Temperature Control",
+                "Heating Setpoint",
+                "Perimeter_ZN_1"
+            ),
+            "heating_actuator_Perimeter_ZN_2" : (
+                "Zone Temperature Control",
+                "Heating Setpoint",
+                "Perimeter_ZN_2"
+            ),
+            "heating_actuator_Perimeter_ZN_3" : (
+                "Zone Temperature Control",
+                "Heating Setpoint",
+                "Perimeter_ZN_3"
+            ),
+            "heating_actuator_Perimeter_ZN_4" : (
+                "Zone Temperature Control",
+                "Heating Setpoint",
+                "Perimeter_ZN_4"
+            ),
         }
         self.actuator_handles: Dict[str, int] = {}
 
@@ -208,23 +261,61 @@ class EnergyPlusRunner:
 
         if self.act_queue.empty():
             return
-        next_action = self.act_queue.get()[0]
+        next_action = self.act_queue.get()
         #next_action = self._rescale(next_action, -1, 1, 15, 30)
 
-        assert isinstance(next_action, float) or isinstance(next_action, np.float32) # for Box action space, next_action dtype will be float32
-        assert next_action >= 15
+        assert all(isinstance(action_val, float) or isinstance(action_val, np.float32) for action_val in next_action)
 
         self.x.set_actuator_value(
             state=state_argument,
-            actuator_handle=self.actuator_handles['cooling_actuator_living'],
-            actuator_value=next_action
-            # actuator_value=20.0
+            actuator_handle=self.actuator_handles['cooling_actuator_Core_ZN'],
+            actuator_value=next_action[0]
         )
         self.x.set_actuator_value(
             state=state_argument,
-            actuator_handle=self.actuator_handles['heating_actuator_living'],
+            actuator_handle=self.actuator_handles['cooling_actuator_Perimeter_ZN_1'],
+            actuator_value=next_action[1]
+        )
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['cooling_actuator_Perimeter_ZN_2'],
+            actuator_value=next_action[2]
+        )
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['cooling_actuator_Perimeter_ZN_3'],
+            actuator_value=next_action[3]
+        )
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['cooling_actuator_Perimeter_ZN_4'],
+            actuator_value=next_action[4]
+        )
+
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['heating_actuator_Core_ZN'],
             actuator_value=0 # NOTE: set it to a extreme low temp so it's never triggered
-            # actuator_value=15.0
+        )
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['heating_actuator_Perimeter_ZN_1'],
+            actuator_value=0 # NOTE: set it to a extreme low temp so it's never triggered
+        )
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['heating_actuator_Perimeter_ZN_2'],
+            actuator_value=0 # NOTE: set it to a extreme low temp so it's never triggered
+        )
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['heating_actuator_Perimeter_ZN_3'],
+            actuator_value=0 # NOTE: set it to a extreme low temp so it's never triggered
+        )
+        self.x.set_actuator_value(
+            state=state_argument,
+            actuator_handle=self.actuator_handles['heating_actuator_Perimeter_ZN_4'],
+            actuator_value=0 # NOTE: set it to a extreme low temp so it's never triggered
         )
 
     def _init_callback(self, state_argument) -> bool:
@@ -294,15 +385,7 @@ class EnergyPlusEnv(gym.Env):
         # self.start_date = datetime(2000, env_config['start_date'][0], env_config['start_date'][1])
         # self.end_date = datetime(2000, env_config['end_date'][0], env_config['end_date'][1])
 
-
-        self.acceptable_pmv = 0.7
-
-        self.using_pmv_cache = env_config['pmv_pickle_available']
-        self.PMV_CACHE = dict()
-        self.PMV_CACHE_PATH = env_config['pmv_pickle_path']
-        if self.using_pmv_cache:
-            self.pickle_load_pmv_cache()
-
+        obs_len = 10
         low_obs = np.array(
             [-100.0, -100.0, -100.0, 0, 0, 0, 0, 0]
         )
@@ -320,7 +403,7 @@ class EnergyPlusEnv(gym.Env):
 
         self.prev_obs = None
 
-        self.action_space: Box = Box(np.array([15]), np.array([30]), dtype=np.float32)
+        self.action_space: MultiDiscrete = MultiDiscrete([61, 61, 61, 61, 61])
 
         self.energyplus_runner: Optional[EnergyPlusRunner] = None
         self.meter_queue: Optional[Queue] = None
@@ -336,51 +419,6 @@ class EnergyPlusEnv(gym.Env):
         new_range = new_range_max - new_range_min
         return (((action - old_range_min) * new_range) / old_range) + new_range_min
 
-    def pickle_save_pmv_cache(self):
-        '''
-        if pmv_pickle_avaiable is True -> self.using_pmv_cache is True
-        then even is pickle_save_pmv_cache() is called, it won't save
-        '''
-        if not self.using_pmv_cache:
-            with open(self.PMV_CACHE_PATH, 'wb') as handle:
-                pickle.dump(self.PMV_CACHE, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-    def pickle_load_pmv_cache(self):
-        with open(self.PMV_CACHE_PATH, 'rb') as handle:
-            p = pickle.load(handle)
-            self.PMV_CACHE = p
-
-    def masking_valid_actions(self, scale:tuple =(-1, 1)) -> tuple:
-        def f(x):
-            tr = self.last_next_state[2]
-            rh = self.last_next_state[3]
-            return abs(self._compute_reward_thermal_comfort(x, tr, 0.1, rh)) - self.acceptable_pmv
-
-        # try fetch PMV_CACHE
-        tr = self.last_next_state[2]
-        rh = self.last_next_state[3]
-        cache = self.PMV_CACHE.get((round(tr, 3), round(rh, 3)), False)
-        if cache:
-            # print('using cache!') # NOTE: checked that cache works
-            return cache
-
-        pivot = None
-        xs = (x * 0.5 for x in range(0,31))
-        for x in xs:
-            #print('x', x+15, 'f(x)', f(x + 15))
-            if f(x + 15) < 0:
-                pivot = x + 15
-        if pivot == None:
-            self.PMV_CACHE[(round(tr, 3), round(rh, 3))] = scale
-            #return (15, 30)
-            return scale
-        else:
-            root1 = scipy.optimize.brentq(f, pivot, pivot + 20)
-            root2 = scipy.optimize.brentq(f, pivot, pivot - 20)
-            root1_scaled = self._rescale(root1, self.action_space.low[0], self.action_space.high[0], scale[0], scale[1])
-            root2_scaled = self._rescale(root2, self.action_space.low[0], self.action_space.high[0], scale[0], scale[1])
-            self.PMV_CACHE[(round(tr, 3), round(rh, 3))] = (root2_scaled, root1_scaled)
-            return (root2_scaled, root1_scaled) # tuple([lower root, higher root])
 
 
     def retrieve_actuators(self):
@@ -388,9 +426,19 @@ class EnergyPlusEnv(gym.Env):
         for debugging purposes: fetches actuator values (cooling, heating)
         '''
         runner = self.energyplus_runner
-        cooling_actuator_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['cooling_actuator_living'])
-        heating_actuator_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['heating_actuator_living'])
-        return (cooling_actuator_value, heating_actuator_value)
+        cooling_actuator_Core_ZN_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['cooling_actuator_Core_ZN'])
+        cooling_actuator_Perimeter_ZN_1_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['cooling_actuator_Perimeter_ZN_1'])
+        cooling_actuator_Perimeter_ZN_2_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['cooling_actuator_Perimeter_ZN_2'])
+        cooling_actuator_Perimeter_ZN_3_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['cooling_actuator_Perimeter_ZN_3'])
+        cooling_actuator_Perimeter_ZN_4_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['cooling_actuator_Perimeter_ZN_4'])
+        heating_actuator_Core_ZN_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['heating_actuator_Core_ZN'])
+        heating_actuator_Perimeter_ZN_1_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['heating_actuator_Perimeter_ZN_1'])
+        heating_actuator_Perimeter_ZN_2_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['heating_actuator_Perimeter_ZN_2'])
+        heating_actuator_Perimeter_ZN_3_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['heating_actuator_Perimeter_ZN_3'])
+        heating_actuator_Perimeter_ZN_4_value = runner.x.get_actuator_value(runner.energyplus_state, runner.actuator_handles['heating_actuator_Perimeter_ZN_4'])
+        cooling_values = [cooling_actuator_Core_ZN_value, cooling_actuator_Perimeter_ZN_1_value, cooling_actuator_Perimeter_ZN_2_value, cooling_actuator_Perimeter_ZN_3_value, cooling_actuator_Perimeter_ZN_4_value]
+        heating_values = [heating_actuator_Core_ZN_value, heating_actuator_Perimeter_ZN_1_value, heating_actuator_Perimeter_ZN_2_value, heating_actuator_Perimeter_ZN_3_value, heating_actuator_Perimeter_ZN_4_value]
+        return cooling_values, heating_values
 
     def reset(
             self, *,
@@ -446,9 +494,10 @@ class EnergyPlusEnv(gym.Env):
         # check for simulation errors
         if self.energyplus_runner.failed():
             print(f"EnergyPlus failed with {self.energyplus_runner.sim_results['exit_code']}")
-            sys.exit(1)
+            exit(1)
 
-        action = np.float32(action)
+        #action = np.float32(action)
+        action = np.array([np.float32(action_val) for action_val in action])
         print('action', action)
 
         # enqueue action (received by EnergyPlus through dedicated callback)
@@ -476,18 +525,6 @@ class EnergyPlusEnv(gym.Env):
 
         # compute energy reward
         reward_energy = self._compute_reward_energy(meter)
-        # compute thermal comfort reward
-        reward_thermal_comfort = self._compute_reward_thermal_comfort(
-            obs_vec[1],
-            obs_vec[2],
-            0.1, # air velocity
-            obs_vec[3]
-        )
-
-
-        # PENALTY
-        # NOTE: penalty is added to reward -> penalty to discourage agent should have negative value
-        PENALTY = 0
 
 
         # NOTE: changed this to 99 but 100 works fine also
@@ -496,23 +533,7 @@ class EnergyPlusEnv(gym.Env):
             done = True
 
 
-        return obs_vec, (reward_energy + PENALTY), done, False, {
-                                                                 'actuators' : self.retrieve_actuators(),
-                                                                 'energy_reward': reward_energy,
-                                                                 'comfort_reward': reward_thermal_comfort}
-
-    def b_during_sim(self):
-        '''
-        DEPRECATED
-        ret boolean value of whether sim is running/not
-        '''
-        month = self.energyplus_runner.x.month(self.energyplus_runner.energyplus_state)
-        day = self.energyplus_runner.x.day_of_month(self.energyplus_runner.energyplus_state)
-        curr_date = datetime(2000, month, day)
-        if curr_date < self.start_date or curr_date > self.end_date:
-            return False
-        else:
-            return True
+        return obs_vec, reward_energy, done, False, {}
 
     def render(self, mode="human"):
         # TODO? : maybe add IDF visualization option
@@ -674,15 +695,12 @@ class EnergyPlusEnv(gym.Env):
 #                 'num_workers': 2
 #                 }
 
-default_args = {'idf': '../in.idf',
-                'epw': '../weather.epw',
-                'csv': True,
+default_args = {'idf': './in.idf',
+                'epw': './weather.epw',
+                'csv': False,
                 'output': './output',
                 'timesteps': 1000000.0,
                 'num_workers': 2,
-                'annual': False,
-                'pmv_pickle_available': False,
-                'pmv_pickle_path': './pmv_cache.pickle'
                 }
 
 
@@ -699,73 +717,15 @@ if __name__ == "__main__":
 
         while not done:
             action = env.action_space.sample()
-            print(action)
+            #print(action)
+            print('##############################################')
+            print('action:', action)
+            print('actuators', env.retrieve_actuators()[0])
+            print('----------------------------------------------')
+            print('state:', state)
             ret = n_state, reward, done, truncated, info = env.step(action)
-            print('actuators', info['actuators'])
-            score+=info['energy_reward']
+            print('n_state', n_state)
+            print('##############################################')
 
         scores.append(score)
         print("SCORES: ", scores)
-# {'outdoor_temp': ('Site Outdoor Air Drybulb Temperature', 'Environment'),
-#  'living_unit1_temp': ('Zone Air Temperature',
-#                        'living_unit1'), 'attic_unit1_temp': ('Zone Air
-#                           Temperature', 'attic_unit1'), 'ground_temp': ('Site
-#                           Ground Temperature', 'Environment'),
-#  'window_ldf_1.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_ldf_1.unit1'),
-#  'window_ldb_1.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_ldb_1.unit1'),
-#  'window_sdr_1.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_sdr_1.unit1'),
-#  'window_sdl_1.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_sdl_1.unit1'),
-#  'window_ldf_2.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_ldf_2.unit1'),
-#  'window_ldb_2.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_ldb_2.unit1'),
-#  'window_sdr_2.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_sdr_2.unit1'),
-#  'window_sdl_2.unit1_sky_diffuse': ('Surface Outside
-#                           Face Incident Sky Diffuse Solar Radiation Rate per
-#                           Area', 'Window_sdl_2.unit1'),
-#  'roof_front_unit1_sky_diffuse': ('Surface Outside Face
-#                           Incident Sky Diffuse Solar Radiation Rate per Area',
-#                                   'Roof_front_unit1'), 'roof_back_unit1_sky_diffuse':
-#  ('Surface Outside Face Incident Sky Diffuse Solar
-#                           Radiation Rate per Area', 'Roof_back_unit1'),
-#  'roof_right_unit1_sky_diffuse': ('Surface Outside Face
-#                           Incident Sky Diffuse Solar Radiation Rate per Area',
-#                                   'Roof_right_unit1'), 'roof_left_unit1_sky_diffuse':
-#  ('Surface Outside Face Incident Sky Diffuse Solar
-#                           Radiation Rate per Area', 'Roof_left_unit1'),
-#  'wall_ldf_1.unit1_sky_diffuse': ('Surface Outside Face
-#                           Incident Sky Diffuse Solar Radiation Rate per Area',
-#                                   'Wall_ldf_1.unit1'), 'wall_sdr_1.unit1_sky_diffuse':
-#  ('Surface Outside Face Incident Sky Diffuse Solar
-#                           Radiation Rate per Area', 'Wall_sdr_1.unit1'),
-#  'wall_ldb_1.unit1_sky_diffuse': ('Surface Outside Face
-#                           Incident Sky Diffuse Solar Radiation Rate per Area',
-#                                   'Wall_ldb_1.unit1'), 'wall_sdl_1.unit1_sky_diffuse':
-#  ('Surface Outside Face Incident Sky Diffuse Solar
-#                           Radiation Rate per Area', 'Wall_sdl_1.unit1'),
-#  'wall_ldf_2.unit1_sky_diffuse': ('Surface Outside Face
-#                           Incident Sky Diffuse Solar Radiation Rate per Area',
-#                                   'Wall_ldf_2.unit1'), 'wall_sdr_2.unit1_sky_diffuse':
-#  ('Surface Outside Face Incident Sky Diffuse Solar
-#                           Radiation Rate per Area', 'Wall_sdr_2.unit1'),
-#  'wall_ldb_2.unit1_sky_diffuse': ('Surface Outside Face
-#                           Incident Sky Diffuse Solar Radiation Rate per Area',
-#                                   'Wall_ldb_2.unit1'), 'wall_sdl_2.unit1_sky_diffuse':
-#  ('Surface Outside Face Incident Sky Diffuse Solar
-#                           Radiation Rate per Area', 'Wall_sdl_2.unit1'),
-#  'site_direct_solar': ('Site Direct Solar Radiation
-#                           Rate per Area', 'Environment'),
-#  'site_horizontal_infrared': ('Site Horizontal Infrared
-#                           Radiation Rate per Area', 'Environment')}
