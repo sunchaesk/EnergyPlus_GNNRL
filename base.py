@@ -717,15 +717,14 @@ if __name__ == "__main__":
 
         while not done:
             action = env.action_space.sample()
+            action = [15,15,15,15,15]
             #print(action)
-            print('##############################################')
-            print('action:', action)
-            print('actuators', env.retrieve_actuators()[0])
-            print('----------------------------------------------')
-            print('state:', state)
             ret = n_state, reward, done, truncated, info = env.step(action)
-            print('n_state', n_state)
-            print('##############################################')
+            score += reward
 
         scores.append(score)
         print("SCORES: ", scores)
+
+
+# SCORES:  [-5791563413.50407]
+# SCORES:  [-10749664786.402805]
