@@ -27,14 +27,16 @@ class Encoder(nn.Module):
 
     def generate_feature_matrix(self, eplus_obs_vec):
         feature_matrix = []
-        for zone_num in zone_index:
+        for zone_name in self.zone_index:
             zone_features = []
 
-            curr_zone = self.zone_index[zone_num]
-            variable_handles_to_fetch = self.zone_to_variables[curr_zone]
-            variable_handles_index = [self.handle_to_index[handle] for handle in variable_handles_to_fetch]
-            for variable_handle in variable_handles_index:
-                zone_features.append(eplus_obs_vec[variable_handle])
+            variables_to_fetch = self.zone_to_variables[zone_name]
+
+            for variable_handle in variables_to_fetch:
+                if variable_handle == 0:
+                    zone_features.append(0)
+                else:
+                    zone_features.append(eplus_obs_vec[self.handle_to_index[variable_handle]])
 
             feature_matrix.append(np.array(zone_features))
 

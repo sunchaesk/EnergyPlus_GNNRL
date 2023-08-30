@@ -420,7 +420,8 @@ def generate_variables(parsed_idf):
     ret = dict()
     # elements of 'generate_variables_list' are functions
     # these are for variables to be collected per zone
-    zone_generate_variables_list = [generate_zone_relative_humidity, generate_zone_sky_diffuse_solar, generate_zone_indoor_temperature]
+    # zone_generate_variables_list = [generate_zone_relative_humidity, generate_zone_sky_diffuse_solar, generate_zone_indoor_temperature]
+    zone_generate_variables_list = [generate_zone_indoor_temperature]
     for generate_function in zone_generate_variables_list:
         temp_dict = generate_function(parsed_idf)
         ret.update(temp_dict)
@@ -432,7 +433,8 @@ def generate_variables(parsed_idf):
         "Site Outdoor Air Drybulb Temperature",
         "Site Direct Solar Radiation Rate per Area",
         "Site Horizontal Infrared Radiation Rate per Area",
-        "Site Outdoor Air Relative Humidity",
+        "Site Diffuse Solar Radiation Rate per Area",
+        #"Site Outdoor Air Relative Humidity",
     ]
     for global_var in global_vars_identifier:
         var_name = 'var_environment_' + '_'.join(global_var.lower().split())
@@ -445,6 +447,26 @@ def generate_variables(parsed_idf):
 ##########################################
 ## GNN UTILS
 ##########################################
+
+def gnn_variable_handle_to_index(parsed_idf):
+    '''
+    added time to the handles
+    -> For this codebase, time is treated separately from EnergyPlus because it's clunky
+    '''
+    ret_dict = dict()
+    vars_dict = generate_variables(parsed_idf)
+    vars_dict_keys = list(vars_dict.keys())
+
+    vars_dict_keys.append('var-environment-time-month')
+    vars_dict_keys.append('var-environment-time-day')
+    vars_dict_keys.append('var-environemnt-time-hour')
+    vars_dict_keys.append('var-environment-time-day_of_week')
+
+    for i in range(len(vars_dict_keys)):
+        ret_dict[vars_dict_keys[i]] = i
+
+    return ret_dict
+
 
 def gnn_coo_generate(parsed_idf):
     zone_to_number_dict = gnn_zone_numbering_dict(parsed_idf)
@@ -460,7 +482,6 @@ def gnn_coo_generate(parsed_idf):
         b.append(numbered_connection[1])
     #print(temp_list)
 
-    print(a, b)
     return [a, b]
 
 
@@ -480,6 +501,13 @@ def gnn_zone_to_variables(parsed_idf):
         for zone in zone_list:
             if zone.lower() in variable_handle:
                 ret_dict[zone].append(variable_handle)
+
+    for zone in zone_list:
+        ret_dict[zone].append('var-environment-time-month')
+        ret_dict[zone].append('var-environment-time-day')
+        ret_dict[zone].append('var-environment-time-hour')
+        ret_dict[zone].append('var-environment-time-day_of_week')
+        ret_dict[zone].append('var_environment_site_outdoor_air_drybulb_temperature')
 
     return ret_dict
 
@@ -512,6 +540,9 @@ if __name__ == "__main__":
     # print(json.dumps(temp, indent=4))
     # print('len:', len(temp))
 
+    print(gnn_variable_handle_to_index(res))
+    # print(json.dumps(ge(res), indent=4))
+    #print(json.dumps(gnn_zone_to_variables(res), indent=4))
 
     l2 = main(res)
     visualize_connections(l2)
