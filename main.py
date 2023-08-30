@@ -27,7 +27,9 @@ parser.add_argument("-ep", type=int, default=100, help="The amount of training e
 parser.add_argument("-seed", type=int, default=0, help="Seed for the env and torch network weights, default is 0")
 parser.add_argument("-lr", type=float, default=5e-4, help="Learning rate of adapting the network weights, default is 5e-4")
 parser.add_argument("-a", "--alpha", type=float,default=0.1, help="entropy alpha value, if not choosen the value is leaned by the agent")
+parser.add_argument("-encoder_hidden", type=int, default=256, help="Dimension of the hidden representation encoded by the MLP encoder layer")
 parser.add_argument("-layer_size", type=int, default=256, help="Number of nodes per neural network layer, default is 256")
+parser.add_argument("-gcn_hidden", type=int, default=256, help="Dimension of the hidden representation of the GCN layer")
 parser.add_argument("-repm", "--replay_memory", type=int, default=int(1e6), help="Size of the Replay memory, default is 1e6")
 parser.add_argument("--print_every", type=int, default=2, help="Prints every x episodes the average reward over x episodes")
 parser.add_argument("-bs", "--batch_size", type=int, default=256, help="Batch size, default is 256")
@@ -35,8 +37,7 @@ parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate fa
 parser.add_argument("-g", "--gamma", type=float, default=0.95, help="discount factor gamma, default is 0.99")
 parser.add_argument("--saved_model", type=str, default=None, help="Load a saved model to perform a test run!")
 args = parser.parse_args()
-print(args.repm)
-exit(1)
+args.replay_memory
 
 
 '''
@@ -77,6 +78,7 @@ ZONE_TO_VARIABLES = {
     'Perimeter_ZN_4': ['var-perimeter_zn_4-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
     'Perimeter_ZN_4': ['var-perimeter_zn_4-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
 } # variables handles associated for each zone
+
 ZONE_INDEX = {
     'Outdoors': 0,
     'Attic': 1,
@@ -86,6 +88,7 @@ ZONE_INDEX = {
     'Perimeter_ZN_2': 5,
     'Perimeter_ZN_1': 6,
 }# zone names numbered from 0
+
 EDGE_INDEX = [
     [0, 6, 0, 5, 2, 3, 4, 6, 3, 4, 7, 0, 7, 0, 2, 5, 2, 3, 5, 6, 4, 6, 0, 7, 2, 5, 5, 7, 2, 3, 3, 4, 5, 7, 4, 6],
     [7, 5, 3, 2, 5, 2, 2, 4, 5, 5, 0, 2, 3, 5, 4, 4, 6, 4, 6, 0, 6, 7, 6, 5, 0, 0, 7, 4, 3, 0, 7, 7, 3, 6, 3, 2]
@@ -99,10 +102,23 @@ def main():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.nvec[0] # returns value of discrete. action space is defined in multivariate
 
+    num_features = 8
     num_agents = 5
     agents_index = [2,3,4,5,6] # zone indices with controllable agents
 
-    buff = ReplayBuffer()
+    buff = ReplayBuffer(args.replay_memory, state_dim, action_dim, num_agents)
+    model = ThermoGRL(
+        handle_to_index=HANDLE_TO_INDEX,
+        zone_to_variables=ZONE_TO_VARIABLES,
+        zone_index=ZONE_INDEX,
+        edge_index=EDGE_INDEX,
+        edge_attr=EDGE_ATTR,
+        num_features=num_features,
+        encoder_hidden_dim=args.encoder_hidden,
+        gcn_hidden_dim=args.gcn_hidden,
+        q_net_hidden_dim=args.layer_size,
+        action_dim=action_dim
+    )
 
 
 if __name__ == "__main__":
