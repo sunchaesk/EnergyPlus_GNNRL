@@ -50,28 +50,23 @@ class EnergyPlusRunner:
         # below is declaration of variables, meters and actuators
         # this simulation will interact with
         self.variables = {
-            'site_outdoor_temperature': ("Site Outdoor Air Drybulb Temperature", "Environment"),
-            'site_ground_temperature': ("Site Ground Temperature", "Environment"),
-            'site_direct_solar': ("Site Direct Solar Radiation Rate per Area", "Environment"),
-            'site_diffuse_solar': ("Site Diffuse Solar Radiation Rate per Area", "Environment"),
-            'site_horizontal_infrared': ("Site Horizontal Infrared Radiation Rate per Area", "Environment"),
-            'Attic_indoor_temperature': ("Zone Air Temperature", "Attic"),
-            'Core_ZN_indoor_temperature': ("Zone Air Temperature", "Core_ZN"),
-            'Perimeter_ZN_1_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_1"),
-            'Perimeter_ZN_2_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_2"),
-            'Perimeter_ZN_3_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_3"),
-            'Perimeter_ZN_4_indoor_temperature': ("Zone Air Temperature", "Perimeter_ZN_4"),
+            'var-attic-indoor_temperature': ('Zone Air Temperature', 'Attic'),
+            'var-core_zn-indoor_temperature': ('Zone Air Temperature', 'Core_ZN'),
+            'var-perimeter_zn_1-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_1'),
+            'var-perimeter_zn_2-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_2'),
+            'var-perimeter_zn_3-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_3'),
+            'var-perimeter_zn_4-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_4'),
+            'var_environment_site_outdoor_air_drybulb_temperature': ('Site Outdoor Air Drybulb Temperature', 'Environment'),
+            'var_environment_site_direct_solar_radiation_rate_per_area': ('Site Direct Solar Radiation Rate per Area', 'Environment'),
+            'var_environment_site_horizontal_infrared_radiation_rate_per_area': ('Site Horizontal Infrared Radiation Rate per Area', 'Environment'),
+            'var_environment_site_diffuse_solar_radiation_rate_per_area': ('Site Diffuse Solar Radiation Rate per Area', 'Environment')
         }
+
+
         self.var_handles: Dict[str, int] = {}
         self.var_handles_index: Dict[str, int] = {}
         for i in range(len(self.variables)):
             self.var_handles_index[list(self.variables.keys())[i]] = i
-
-        print('------------------------')
-        print('------------------------')
-        print(self.var_handles_index)
-        print('------------------------')
-        print('------------------------')
 
         self.meters = {
             "elec_hvac": "Electricity:HVAC",
@@ -242,15 +237,34 @@ class EnergyPlusRunner:
                 in self.var_handles.items()
             },
         }
+
+        year = self.x.year(self.energyplus_state)
+        month = self.x.month(self.energyplus_state)
+        day = self.x.day_of_month(self.energyplus_state)
+        hour = self.x.hour(self.energyplus_state)
+        minute = self.x.minutes(self.energyplus_state)
+        day_of_week = self.x.day_of_week(self.energyplus_state)
+
+        self.next_obs['var-environment-time-month'] = month
+        self.next_obs['var-environment-time-day'] = day
+        self.next_obs['var-environment-time-hour'] = hour
+        self.next_obs['var-environment-time-day_of_week'] = day_of_week
+
+        print('base.py collect obs:', self.next_obs)
+        exit(1)
         self.obs_queue.put(self.next_obs)
 
-    def _rescale(self, action, old_range_min, old_range_max, new_range_min, new_range_max):
+    def _continuous_rescale(self, action, old_range_min, old_range_max, new_range_min, new_range_max):
         '''
         _rescale method can be used for larger range to smaller range
         '''
         old_range = old_range_max - old_range_min
         new_range = new_range_max - new_range_min
         return (((action - old_range_min) * new_range) / old_range) + new_range_min
+
+    def _discrete_rescale(self, action, number_of_discrete, new_range_min, new_range_max):
+        action_nparray = np.linspace(new_range_min, new_range_max, number_of_discrete)
+        return action_nparray[int(action)]
 
     def _send_actions(self, state_argument):
         """
@@ -261,10 +275,16 @@ class EnergyPlusRunner:
 
         if self.act_queue.empty():
             return
-        next_action = self.act_queue.get()
+        temp_next_action = self.act_queue.get()
         #next_action = self._rescale(next_action, -1, 1, 15, 30)
 
-        assert all(isinstance(action_val, float) or isinstance(action_val, np.float32) for action_val in next_action)
+        next_action = []
+        for action_val in temp_next_action:
+            rescaled_action = self._discrete_rescale(action_val, 61, 20, 26)
+            next_action.append(rescaled_action)
+            #next_action.append(np.float32(self._discrete_rescale(action, 61, 20, 26)))
+
+        #assert all(isinstance(action_val, float) or isinstance(action_val, np.float32) for action_val in next_action)
 
         self.x.set_actuator_value(
             state=state_argument,
@@ -717,8 +737,9 @@ if __name__ == "__main__":
 
         while not done:
             action = env.action_space.sample()
-            action = [15,15,15,15,15]
-            #print(action)
+            action = [0,0,0,0,0]
+            # print('action:', action)
+            # print('actuators:', env.retrieve_actuators())
             ret = n_state, reward, done, truncated, info = env.step(action)
             score += reward
 

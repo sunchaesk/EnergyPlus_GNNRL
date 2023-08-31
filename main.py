@@ -11,6 +11,7 @@ import torch.optim as optim
 
 from buffer import ReplayBuffer
 from model import ThermoGRL
+from model import Encoder, Graph_Encoder
 
 import gymnasium as gym
 
@@ -36,6 +37,10 @@ parser.add_argument("-bs", "--batch_size", type=int, default=256, help="Batch si
 parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate factor tau, default is 1e-2")
 parser.add_argument("-g", "--gamma", type=float, default=0.95, help="discount factor gamma, default is 0.99")
 parser.add_argument("--saved_model", type=str, default=None, help="Load a saved model to perform a test run!")
+
+# DQN stuff
+parser.add_argument("-epsilon", type=float, default=0.9, help="Load a saved model to perform a test run!")
+
 args = parser.parse_args()
 args.replay_memory
 
@@ -52,21 +57,22 @@ FEATURE MATRIX features order:
 8. day_of_week
 '''
 
-HANDLE_TO_INDEX = {'var-perimeter_zn_1-indoor_temperature': 0,
-                   'var-attic-indoor_temperature': 1,
-                   'var-core_zn-indoor_temperature': 2,
-                   'var-perimeter_zn_3-indoor_temperature': 3,
-                   'var-perimeter_zn_2-indoor_temperature': 4,
-                   'var-perimeter_zn_4-indoor_temperature': 5,
-                   'var_environment_site_outdoor_air_drybulb_temperature': 6,
-                   'var_environment_site_direct_solar_radiation_rate_per_area': 7,
-                   'var_environment_site_horizontal_infrared_radiation_rate_per_area': 8,
-                   'var_environment_site_diffuse_solar_radiation_rate_per_area': 9,
-                   'var-environment-time-month': 10,
-                   'var-environment-time-day': 11,
-                   'var-environemnt-time-hour': 12,
-                   'var-environment-time-day_of_week': 13
-                }
+HANDLE_TO_INDEX = {
+    'var-attic_indoor_temperature': 0,
+    'var-core_zn_indoor_temperature': 1,
+    'var-perimeter_zn_1-indoor_temperature': 2,
+    'var-perimeter_zn_2-indoor_temperature': 3,
+    'var-perimeter_zn_3-indoor_temperature': 4,
+    'var-perimeter_zn_4-indoor_temperature': 5,
+    'var_environment_site_outdoor_air_drybulb_temperature': 6,
+    'var_environment_site_direct_solar_radiation_rate_per_area': 7,
+    'var_environment_site_horizontal_infrared_radiation_rate_per_area': 8,
+    'var_environment_site_diffuse_solar_radiation_rate_per_area': 9,
+    'var-environment-time-month': 10,
+    'var-environment-time-day': 11,
+    'var-environment-time-hour': 12,
+    'var-environment-time-day_of_week': 13
+}
 
 ZONE_TO_VARIABLES = {
     'Outdoors': ['var_environment_site_outdoor_air_drybulb_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
@@ -83,15 +89,15 @@ ZONE_INDEX = {
     'Outdoors': 0,
     'Attic': 1,
     'Core_ZN': 2,
-    'Perimeter_ZN_3': 3,
-    'Perimeter_ZN_4': 4,
-    'Perimeter_ZN_2': 5,
-    'Perimeter_ZN_1': 6,
+    'Perimeter_ZN_1': 3,
+    'Perimeter_ZN_2': 4,
+    'Perimeter_ZN_3': 5,
+    'Perimeter_ZN_4': 6,
 }# zone names numbered from 0
 
 EDGE_INDEX = [
-    [0, 6, 0, 5, 2, 3, 4, 6, 3, 4, 7, 0, 7, 0, 2, 5, 2, 3, 5, 6, 4, 6, 0, 7, 2, 5, 5, 7, 2, 3, 3, 4, 5, 7, 4, 6],
-    [7, 5, 3, 2, 5, 2, 2, 4, 5, 5, 0, 2, 3, 5, 4, 4, 6, 4, 6, 0, 6, 7, 6, 5, 0, 0, 7, 4, 3, 0, 7, 7, 3, 6, 3, 2]
+    [4, 6, 2, 2, 2, 1, 5, 3, 0, 0, 3, 3, 4, 0, 4, 1, 6, 5, 5, 5, 6, 6, 4, 4, 4, 3, 1, 1, 1, 2, 2, 3, 0, 6, 5, 0],
+    [0, 1, 4, 5, 3, 0, 6, 4, 4, 5, 5, 2, 1, 3, 6, 6, 2, 4, 3, 2, 5, 4, 2, 5, 3, 0, 2, 4, 3, 1, 6, 1, 1, 0, 0, 6]
 ]# adjacency matrix in COO format
 EDGE_ATTR = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]# edge_attributes for each of the connections in COO format
 
@@ -106,6 +112,16 @@ def main():
     num_agents = 5
     agents_index = [2,3,4,5,6] # zone indices with controllable agents
 
+    ##### NOTE: debug stuff
+    debug_encoder = Encoder(num_features=num_features,
+                            hidden_size=12,
+                            handle_to_index=HANDLE_TO_INDEX,
+                            zone_to_variables=ZONE_TO_VARIABLES,
+                            zone_index=ZONE_INDEX)
+    debug_graph_encoder = Graph_Encoder(12, 32, edge_index=EDGE_INDEX, edge_attr=EDGE_ATTR)
+
+
+
     buff = ReplayBuffer(args.replay_memory, state_dim, action_dim, num_agents)
     model = ThermoGRL(
         handle_to_index=HANDLE_TO_INDEX,
@@ -119,6 +135,24 @@ def main():
         q_net_hidden_dim=args.layer_size,
         action_dim=action_dim
     )
+    optimizer = optim.Adam(model.parameters(), lr=args.lr)
+
+    i_episode = 1
+    n_episode = args.ep
+    total_steps = 0
+    epsilon = args.epsilon
+
+    while i_episode < n_episode:
+        if i_episode > 100:
+            epsilon -= 0.001
+            if episilon < 0.02:
+                epsilon = 0.02
+
+        done = False
+        state = env.reset()
+
+        while not done:
+            total_steps += 1
 
 
 if __name__ == "__main__":

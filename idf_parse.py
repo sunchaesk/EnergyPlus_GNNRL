@@ -470,6 +470,7 @@ def gnn_variable_handle_to_index(parsed_idf):
 
 def gnn_coo_generate(parsed_idf):
     zone_to_number_dict = gnn_zone_numbering_dict(parsed_idf)
+    print('zone_to_number:',zone_to_number_dict)
     connections_list = list(set(tuple(main(parsed_idf))))
     temp_list = []
     a = []
@@ -517,11 +518,13 @@ def gnn_zone_numbering_dict(parsed_idf):
     Ground is always index 1
     '''
     ret_dict = dict()
+
     ret_dict['Outdoors'] = 0
-    ret_dict['Ground'] = 1
+
     zone_list = get_zone_list(parsed_idf)
-    for i in range(len(zone_list)):
-        ret_dict[zone_list[i]] = i + 2
+
+    for i in range(0, len(zone_list)):
+        ret_dict[zone_list[i]] = i + 1
     #print(zone_list)
     return ret_dict
 
@@ -540,7 +543,10 @@ if __name__ == "__main__":
     # print(json.dumps(temp, indent=4))
     # print('len:', len(temp))
 
-    print(gnn_variable_handle_to_index(res))
+    print('zone_numbering dict:', gnn_zone_numbering_dict(res))
+    print(get_zone_list(res))
+    print(gnn_coo_generate(res))
+    # print(generate_variables(res))
     # print(json.dumps(ge(res), indent=4))
     #print(json.dumps(gnn_zone_to_variables(res), indent=4))
 

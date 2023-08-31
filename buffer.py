@@ -7,7 +7,7 @@ import numpy as np
 class ReplayBuffer(object):
     def __init__(self, buffer_size, obs_space, n_action, n_agent):
         self.buffer_size = buffer_size
-        self.n_ant = n_ant
+        self.n_ant = n_agent
         self.pointer = 0
         self.len = 0
         self.actions = np.zeros((self.buffer_size,self.n_ant),dtype = np.int32)
