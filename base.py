@@ -73,6 +73,7 @@ class EnergyPlusRunner:
             "elec_heating": "Heating:Electricity",
             "elec_cooling": "Cooling:Electricity",
             'elec_facility': "Electricity:Facility",
+            # 'core_elec': 'Electricity:Core_ZN:HVAC'
         }
         self.meter_handles: Dict[str, int] = {}
 
@@ -250,8 +251,6 @@ class EnergyPlusRunner:
         self.next_obs['var-environment-time-hour'] = hour
         self.next_obs['var-environment-time-day_of_week'] = day_of_week
 
-        print('base.py collect obs:', self.next_obs)
-        exit(1)
         self.obs_queue.put(self.next_obs)
 
     def _continuous_rescale(self, action, old_range_min, old_range_max, new_range_min, new_range_max):

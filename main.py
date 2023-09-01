@@ -34,6 +34,7 @@ parser.add_argument("-gcn_hidden", type=int, default=256, help="Dimension of the
 parser.add_argument("-repm", "--replay_memory", type=int, default=int(1e6), help="Size of the Replay memory, default is 1e6")
 parser.add_argument("--print_every", type=int, default=2, help="Prints every x episodes the average reward over x episodes")
 parser.add_argument("-bs", "--batch_size", type=int, default=256, help="Batch size, default is 256")
+parser.add_argument("-n_epoch", type=int, default=5, help="Epoch size, default is 5")
 parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate factor tau, default is 1e-2")
 parser.add_argument("-g", "--gamma", type=float, default=0.95, help="discount factor gamma, default is 0.99")
 parser.add_argument("--saved_model", type=str, default=None, help="Load a saved model to perform a test run!")
@@ -95,6 +96,17 @@ ZONE_INDEX = {
     'Perimeter_ZN_4': 6,
 }# zone names numbered from 0
 
+# for convenience
+D_INDEX_TO_ZONE = {
+    0: 'Outdoors',
+    1: 'Attic',
+    2: 'Core_ZN',
+    3: 'Perimeter_ZN_1',
+    4: 'Perimeter_ZN_2',
+    5: 'Perimeter_ZN_3',
+    6: 'Perimeter_ZN_4'
+}
+
 EDGE_INDEX = [
     [4, 6, 2, 2, 2, 1, 5, 3, 0, 0, 3, 3, 4, 0, 4, 1, 6, 5, 5, 5, 6, 6, 4, 4, 4, 3, 1, 1, 1, 2, 2, 3, 0, 6, 5, 0],
     [0, 1, 4, 5, 3, 0, 6, 4, 4, 5, 5, 2, 1, 3, 6, 6, 2, 4, 3, 2, 5, 4, 2, 5, 3, 0, 2, 4, 3, 1, 6, 1, 1, 0, 0, 6]
@@ -135,6 +147,18 @@ def main():
         q_net_hidden_dim=args.layer_size,
         action_dim=action_dim
     )
+    model_tar = ThermoGRL(
+        handle_to_index=HANDLE_TO_INDEX,
+        zone_to_variables=ZONE_TO_VARIABLES,
+        zone_index=ZONE_INDEX,
+        edge_index=EDGE_INDEX,
+        edge_attr=EDGE_ATTR,
+        num_features=num_features,
+        encoder_hidden_dim=args.encoder_hidden,
+        gcn_hidden_dim=args.gcn_hidden,
+        q_net_hidden_dim=args.layer_size,
+        action_dim=action_dim
+    )
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     i_episode = 1
@@ -148,11 +172,35 @@ def main():
             if episilon < 0.02:
                 epsilon = 0.02
 
+        i_episode += 1
+
         done = False
         state = env.reset()
 
         while not done:
             total_steps += 1
+
+            action = []
+            q = model(state)
+            for agent_index in agents_index:
+                if np.random.rand() < epsilon:
+                    a = np.random.choice(action_dim)
+                else:
+                    np.argmax(q[i].cpu().detach().numpy())
+
+                #action[INDEX_TO_ZONE[agent_index]] = a
+                action.append(a)
+
+            next_state, reward, done, truncated, info = env.step(action=action)
+            buff.add(state, EDGE_INDEX, action, reward, next_state, EDGE_INDEX)
+
+            state = next_state
+
+        if not buff.buffer_filled_percentage() >= 30:
+            continue
+
+        for epoch in range(args.n_epoch):
+            states, edge_indices, actions, rewards, next_states, next_edge_indices = buff.get_batch(args.batch_size)
 
 
 if __name__ == "__main__":

@@ -46,9 +46,6 @@ class Encoder(nn.Module):
 
             feature_matrix.append(np.array(zone_features))
 
-
-        print('feature_matrix:', end='')
-        pp.pprint(feature_matrix)
         return feature_matrix
 
     def forward(self, eplus_obs_vec):
