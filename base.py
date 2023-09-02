@@ -73,6 +73,12 @@ class EnergyPlusRunner:
             "elec_heating": "Heating:Electricity",
             "elec_cooling": "Cooling:Electricity",
             'elec_facility': "Electricity:Facility",
+
+            'cooling_core_zn': 'Cooling:EnergyTransfer:Zone:CORE_ZN',
+            'cooling_perimeter_1': 'Cooling:EnergyTransfer:Zone:PERIMETER_ZN_1',
+            'cooling_perimeter_2': 'Cooling:EnergyTransfer:Zone:PERIMETER_ZN_2',
+            'cooling_perimeter_3': 'Cooling:EnergyTransfer:Zone:PERIMETER_ZN_3',
+            'cooling_perimeter_4': 'Cooling:EnergyTransfer:Zone:PERIMETER_ZN_4',
             # 'core_elec': 'Electricity:Core_ZN:HVAC'
         }
         self.meter_handles: Dict[str, int] = {}
@@ -517,7 +523,6 @@ class EnergyPlusEnv(gym.Env):
 
         #action = np.float32(action)
         action = np.array([np.float32(action_val) for action_val in action])
-        print('action', action)
 
         # enqueue action (received by EnergyPlus through dedicated callback)
         # then wait to get next observation.
@@ -539,11 +544,14 @@ class EnergyPlusEnv(gym.Env):
         obs_vec = np.array(list(obs.values()))
 
 
+        #print('METER:', meter)
+
         # update the self.last_next_state
         self.last_next_state = obs_vec
 
         # compute energy reward
         reward_energy = self._compute_reward_energy(meter)
+        reward_zone_cooling_energy_transfer = self._compute_zone_energy_transfer(meter)
 
 
         # NOTE: changed this to 99 but 100 works fine also
@@ -552,7 +560,11 @@ class EnergyPlusEnv(gym.Env):
             done = True
 
 
-        return obs_vec, reward_energy, done, False, {}
+        return obs_vec, reward_zone_cooling_energy_transfer, done, False, {'cooling_core': meter['cooling_core_zn'],
+                                                                           'cooling_perimeter_1': meter['cooling_perimeter_1'],
+                                                                           'cooling_perimeter_2': meter['cooling_perimeter_2'],
+                                                                           'cooling_perimeter_3': meter['cooling_perimeter_3'],
+                                                                           'cooling_perimeter_4': meter['cooling_perimeter_4']}
 
     def render(self, mode="human"):
         # TODO? : maybe add IDF visualization option
@@ -704,6 +716,16 @@ class EnergyPlusEnv(gym.Env):
         reward = -1 * meter['elec_cooling']
         return reward
 
+    @staticmethod
+    def _compute_zone_energy_transfer(meter: Dict[str, float]) -> float:
+        '''compute cooling energy transfer for each zone'''
+        core_zn_ret = -1 * meter['cooling_core_zn']
+        perimeter_1_ret = -1 * meter['cooling_perimeter_1']
+        perimeter_2_ret = -1 * meter['cooling_perimeter_2']
+        perimeter_3_ret = -1 * meter['cooling_perimeter_3']
+        perimeter_4_ret = -1 * meter['cooling_perimeter_4']
+        return [core_zn_ret, perimeter_1_ret, perimeter_2_ret, perimeter_3_ret, perimeter_4_ret]
+
 
 # NOTE: have to give in -x flag
 # default_args = {'idf': '/home/ck/Downloads/Files/in.idf',
@@ -734,17 +756,29 @@ if __name__ == "__main__":
         done = False
         score = 0
 
+        test = 0
+
         while not done:
             action = env.action_space.sample()
-            action = [0,0,0,0,0]
+            action = [30,30,30,30,30]
             # print('action:', action)
             # print('actuators:', env.retrieve_actuators())
             ret = n_state, reward, done, truncated, info = env.step(action)
+
+            test += info['cooling_core'] + info['cooling_perimeter_1'] + info['cooling_perimeter_2'] + info['cooling_perimeter_3'] + info['cooling_perimeter_4']
+
             score += reward
 
         scores.append(score)
         print("SCORES: ", scores)
+        print('TEST:', test)
 
+# SCORES:  [-2767056462.5814853]
+# SCORE-3887297634.02748]
+# SCORES:  [-1794684019.8578289]
+# TEST: 11082714705.507038
+# TEST: 8080984190.156531
+# TEST: 5482413777.092008
 
 # SCORES:  [-5791563413.50407]
 # SCORES:  [-10749664786.402805]
