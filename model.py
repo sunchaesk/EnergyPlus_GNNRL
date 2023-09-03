@@ -132,12 +132,15 @@ class ThermoGRL(nn.Module):
         self.q_net_hidden_dim = q_net_hidden_dim
         self.action_dim = action_dim
 
+        self.edge_index = edge_index
+        self.edge_attr = edge_attr
+
         self.vec_encoder = Encoder(num_features, encoder_hidden_dim, handle_to_index, zone_to_variables, zone_index)
         self.graph_encoder = Graph_Encoder(encoder_hidden_dim, gcn_hidden_dim, edge_index=edge_index, edge_attr=edge_attr)
         self.q_net = Q_Net(gcn_hidden_dim, q_net_hidden_dim, action_dim)
 
     def forward(self, eplus_obs_vec):
         h1 = self.vec_encoder(eplus_obs_vec)
-        h2 = self.graph_encoder(h1)
+        h2 = self.graph_encoder(h1, self.edge_index)
         q = self.q_net(h2)
         return q

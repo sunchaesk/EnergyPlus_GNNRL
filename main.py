@@ -31,11 +31,11 @@ parser.add_argument("-a", "--alpha", type=float,default=0.1, help="entropy alpha
 parser.add_argument("-encoder_hidden", type=int, default=256, help="Dimension of the hidden representation encoded by the MLP encoder layer")
 parser.add_argument("-layer_size", type=int, default=256, help="Number of nodes per neural network layer, default is 256")
 parser.add_argument("-gcn_hidden", type=int, default=256, help="Dimension of the hidden representation of the GCN layer")
-parser.add_argument("-repm", "--replay_memory", type=int, default=int(1e6), help="Size of the Replay memory, default is 1e6")
+parser.add_argument("-repm", "--replay_memory", type=int, default=int(5e4), help="Size of the Replay memory, default is 1e6")
 parser.add_argument("--print_every", type=int, default=2, help="Prints every x episodes the average reward over x episodes")
 parser.add_argument("-bs", "--batch_size", type=int, default=256, help="Batch size, default is 256")
 parser.add_argument("-n_epoch", type=int, default=5, help="Epoch size, default is 5")
-parser.add_argument("-t", "--tau", type=float, default=1e-2, help="Softupdate factor tau, default is 1e-2")
+parser.add_argument("-t", "--tau", type=float, default=0.96, help="Softupdate factor tau, default is 1e-2")
 parser.add_argument("-g", "--gamma", type=float, default=0.95, help="discount factor gamma, default is 0.99")
 parser.add_argument("--saved_model", type=str, default=None, help="Load a saved model to perform a test run!")
 
@@ -162,7 +162,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     i_episode = 1
-    n_episode = args.ep
+    n_episode = args.ep + 1
     total_steps = 0
     epsilon = args.epsilon
 
@@ -186,22 +186,73 @@ def main():
                 if np.random.rand() < epsilon:
                     a = np.random.choice(action_dim)
                 else:
-                    np.argmax(q[i].cpu().detach().numpy())
+                    a = np.argmax(q[agent_index].cpu().detach().numpy())
 
                 #action[INDEX_TO_ZONE[agent_index]] = a
                 action.append(a)
 
             next_state, reward, done, truncated, info = env.step(action=action)
-            buff.add(state, EDGE_INDEX, action, reward, next_state, EDGE_INDEX)
+            buff.add(state, EDGE_INDEX, action, reward, next_state, EDGE_INDEX, done)
 
             state = next_state
 
         if not buff.buffer_filled_percentage() >= 30:
+            print('---------------------------')
+            print('BUFFER FILLED PERCENTAGE:', buff.buffer_filled_percentage())
+            print('---------------------------')
             continue
 
         for epoch in range(args.n_epoch):
-            states, edge_indices, actions, rewards, next_states, next_edge_indices = buff.get_batch(args.batch_size)
+            states, edge_indices, actions, rewards, next_states, next_edge_indices, dones = buff.get_batch(args.batch_size)
 
+            batch_loss = []
+            batch_grads = []
+            for i in range(args.batch_size):
+                curr_state = states[i]
+                curr_next_state = next_states[i]
+                curr_edge_indices = edge_indices[i]
+                curr_rewards = rewards[i]
+                curr_actions = actions[i]
+                curr_dones = dones[i]
+
+                q_values = model(torch.tensor(curr_state)).detach()
+                target_q_values = model_tar(torch.tensor(curr_next_state)).detach()
+                masked_target_q_values = target_q_values[agents_index]
+                target_q_values = np.array(masked_target_q_values.cpu().data)
+                expected_q = np.array(q_values.cpu().data)
+
+                for j in range(len(agents_index)):
+                    expected_q[j][curr_actions[j]] = curr_rewards[j] + (1 - curr_dones) * args.gamma * target_q_values[j][curr_actions[j]]
+
+                #print('temp batch _loss:', (q_values - torch.tensor(expected_q)).pow(2), type((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2)), (q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2).shape)
+                temp_batch_loss = torch.mean((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2))
+
+                temp_batch_loss.requires_grad = True
+
+                temp_batch_loss.backward()
+
+                batch_loss.append(temp_batch_loss)
+                batch_grads.append(temp_batch_loss.grad)
+
+
+            loss = torch.mean(torch.stack(batch_loss))
+            average_gradient = torch.mean(torch.stack(batch_grads), dim=0)
+            optimizer.zero_grad()
+            loss.backward(gradient=average_gradient)
+            optimizer.step()
+            # loss = torch.mean(torch.tensor(batch_loss))
+            # optimizer.zero_grad()
+            # loss.backward()
+            # optimizer.step()
+
+            print('I_EPISODE: ' + str(i_episode) + 'LOSS:' + str(loss.item()))
+            with open('./logs/logs.txt', 'a') as f:
+                f.write(str(loss.item()) + '\n')
+
+            with torch.no_grad():
+                for p, p_targ in zip(model.parameters(), model_tar.parameters()):
+                    p_targ.data.mul_(args.tau)
+                    p_targ.data.add_((1 - args.tau) * p.data)
 
 if __name__ == "__main__":
     main()
