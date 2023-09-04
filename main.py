@@ -20,13 +20,94 @@ import idf_parse as idf
 import base
 from base import default_args
 
+
+def graph_actuation_time_series(i_episode,
+                                outdoor_temperature,
+                                price_signal,
+                                core_zn_actuation,
+                                perimeter_zn_1_actuation,
+                                perimeter_zn_2_actuation,
+                                perimeter_zn_3_actuation,
+                                perimeter_zn_4_actuation,
+                                core_zn_indoor_temperature,
+                                perimeter_zn_1_indoor_temperature,
+                                perimeter_zn_2_indoor_temperature,
+                                perimeter_zn_3_indoor_temperature,
+                                perimeter_zn_4_indoor_temperature,
+                                graph=True):
+    start = 100
+    end = 1300
+    x = list(range(end - start))
+
+    price_signal = [20] * (end - start)
+
+    outdoor_temperature = outdoor_temperature[start:end]
+    price_signal = price_signal[start:end]
+    core_zn_actuation = core_zn_actuation[start:end]
+    perimeter_zn_1_actuation = perimeter_zn_1_actuation[start:end]
+    perimeter_zn_2_actuation = perimeter_zn_2_actuation[start:end]
+    perimeter_zn_3_actuation = perimeter_zn_3_actuation[start:end]
+    perimeter_zn_4_actuation = perimeter_zn_4_actuation[start:end]
+    core_zn_indoor_temperature = core_zn_indoor_temperature[start:end]
+    perimeter_zn_1_indoor_temperature = perimeter_zn_1_indoor_temperature[start:end]
+    perimeter_zn_2_indoor_temperature = perimeter_zn_2_indoor_temperature[start:end]
+    perimeter_zn_3_indoor_temperature = perimeter_zn_3_indoor_temperature[start:end]
+    perimeter_zn_4_indoor_temperature = perimeter_zn_4_indoor_temperature[start:end]
+
+    figs, axs = plt.subplots(5, 1, figsize=(10, 15), sharex=True)
+
+    axs[0].plot(x, outdoor_temperature, label='Outdoor temperature', color='green')
+    axs[0].plot(x, [20] * len(x), label='Price signal', color='black')
+    axs[0].plot(x, core_zn_actuation, label='Cooling Setpoint', color='blue')
+    axs[0].plot(x, core_zn_indoor_temperature, label='Indoor temperature', color='red')
+    axs[0].set_title('Core_ZN')
+    axs[0].legend()
+
+    axs[1].plot(x, outdoor_temperature, label='Outdoor temperature', color='green')
+    axs[1].plot(x, [20] * len(x), label='Price signal', color='black')
+    axs[1].plot(x, perimeter_zn_1_actuation, label='Cooling Setpoint', color='blue')
+    axs[1].plot(x, perimeter_zn_1_indoor_temperature, label='Indoor temperature', color='red')
+    axs[1].set_title('Perimeter_ZN_1')
+    axs[1].legend()
+
+    axs[2].plot(x, outdoor_temperature, label='Outdoor temperature', color='green')
+    axs[2].plot(x, [20] * len(x), label='Price signal', color='black')
+    axs[2].plot(x, perimeter_zn_2_actuation, label='Cooling Setpoint', color='blue')
+    axs[2].plot(x, perimeter_zn_2_indoor_temperature, label='Indoor temperature', color='red')
+    axs[2].set_title('Perimeter_ZN_2')
+    axs[2].legend()
+
+    axs[3].plot(x, outdoor_temperature, label='Outdoor temperature', color='green')
+    axs[3].plot(x, [20] * len(x), label='Price signal', color='black')
+    axs[3].plot(x, perimeter_zn_3_actuation, label='Cooling Setpoint', color='blue')
+    axs[3].plot(x, perimeter_zn_3_indoor_temperature, label='Indoor temperature', color='red')
+    axs[3].set_title('Perimeter_ZN_3')
+    axs[3].legend()
+
+    axs[4].plot(x, outdoor_temperature, label='Outdoor temperature', color='green')
+    axs[4].plot(x, [20] * len(x), label='Price signal', color='black')
+    axs[4].plot(x, perimeter_zn_4_actuation, label='Cooling Setpoint', color='blue')
+    axs[4].plot(x, perimeter_zn_4_indoor_temperature, label='Indoor temperature', color='red')
+    axs[4].set_title('Perimeter_ZN_4')
+    axs[4].legend()
+
+    plt.tight_layout()
+
+    if graph and (i_episode % args.print_every == 0) and i_episode != 0:
+        plt.show()
+
+
+
+
+
+
 # Not all of the arguments are used
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-idf", type=str, default="./in.idf", help="IDF file location")
 parser.add_argument("-eplus_weather_file", type=str, default='./weather.epw', help="Weather file")
 parser.add_argument("-ep", type=int, default=100, help="The amount of training episodes, default is 100")
 parser.add_argument("-seed", type=int, default=0, help="Seed for the env and torch network weights, default is 0")
-parser.add_argument("-lr", type=float, default=5e-4, help="Learning rate of adapting the network weights, default is 5e-4")
+parser.add_argument("-lr", type=float, default=1e-5, help="Learning rate of adapting the network weights, default is 5e-4")
 parser.add_argument("-a", "--alpha", type=float,default=0.1, help="entropy alpha value, if not choosen the value is leaned by the agent")
 parser.add_argument("-encoder_hidden", type=int, default=256, help="Dimension of the hidden representation encoded by the MLP encoder layer")
 parser.add_argument("-layer_size", type=int, default=256, help="Number of nodes per neural network layer, default is 256")
@@ -166,6 +247,20 @@ def main():
     total_steps = 0
     epsilon = args.epsilon
 
+
+    outdoor_temperature = []
+    price_signal = []
+    core_zn_actuation = []
+    perimeter_zn_1_actuation = []
+    perimeter_zn_2_actuation = []
+    perimeter_zn_3_actuation = []
+    perimeter_zn_4_actuation = []
+    core_zn_indoor_temperature = []
+    perimeter_zn_1_indoor_temperature = []
+    perimeter_zn_2_indoor_temperature = []
+    perimeter_zn_3_indoor_temperature = []
+    perimeter_zn_4_indoor_temperature = []
+
     while i_episode < n_episode:
         if i_episode > 100:
             epsilon -= 0.001
@@ -176,6 +271,8 @@ def main():
 
         done = False
         state = env.reset()
+
+        score = 0
 
         while not done:
             total_steps += 1
@@ -191,10 +288,54 @@ def main():
                 #action[INDEX_TO_ZONE[agent_index]] = a
                 action.append(a)
 
+
+
+
             next_state, reward, done, truncated, info = env.step(action=action)
             buff.add(state, EDGE_INDEX, action, reward, next_state, EDGE_INDEX, done)
 
+            score += -1 * sum(reward)
+
+
+            # for graphing time series
+            cooling_actuators = env.retrieve_actuators()[0]
+            outdoor_temperature.append(state[6])
+            price_signal.append(info['cost_signal'])
+            core_zn_actuation.append(cooling_actuators[0])
+            perimeter_zn_1_actuation.append(cooling_actuators[1])
+            perimeter_zn_2_actuation.append(cooling_actuators[2])
+            perimeter_zn_3_actuation.append(cooling_actuators[3])
+            perimeter_zn_4_actuation.append(cooling_actuators[4])
+            core_zn_indoor_temperature.append(state[1])
+            perimeter_zn_1_indoor_temperature.append(state[2])
+            perimeter_zn_2_indoor_temperature.append(state[3])
+            perimeter_zn_3_indoor_temperature.append(state[4])
+            perimeter_zn_4_indoor_temperature.append(state[5])
+
             state = next_state
+
+        # done
+        print('----------------------------------')
+        print('I_EPISODE:', i_episode, 'SCORE:', score)
+        print('----------------------------------')
+        with open('./logs/logs.txt', 'a') as f:
+            f.write(str(score) + '\n')
+
+        graph_actuation_time_series(i_episode,
+                                    outdoor_temperature,
+                                    price_signal,
+                                    core_zn_actuation,
+                                    perimeter_zn_1_actuation,
+                                    perimeter_zn_2_actuation,
+                                    perimeter_zn_3_actuation,
+                                    perimeter_zn_4_actuation,
+                                    core_zn_indoor_temperature,
+                                    perimeter_zn_1_indoor_temperature,
+                                    perimeter_zn_2_indoor_temperature,
+                                    perimeter_zn_3_indoor_temperature,
+                                    perimeter_zn_4_indoor_temperature,
+                                    graph=True)
+
 
         if not buff.buffer_filled_percentage() >= 30:
             print('---------------------------')
@@ -202,51 +343,50 @@ def main():
             print('---------------------------')
             continue
 
-        for epoch in range(args.n_epoch):
-            states, edge_indices, actions, rewards, next_states, next_edge_indices, dones = buff.get_batch(args.batch_size)
+        # for epoch in range(args.n_epoch):
+        #     states, edge_indices, actions, rewards, next_states, next_edge_indices, dones = buff.get_batch(args.batch_size)
 
-            batch_loss = []
-            batch_grads = []
-            for i in range(args.batch_size):
-                curr_state = states[i]
-                curr_next_state = next_states[i]
-                curr_edge_indices = edge_indices[i]
-                curr_rewards = rewards[i]
-                curr_actions = actions[i]
-                curr_dones = dones[i]
+        #     batch_loss = []
+        #     batch_grads = []
+        #     for i in range(args.batch_size):
+        #         curr_state = states[i]
+        #         curr_next_state = next_states[i]
+        #         curr_edge_indices = edge_indices[i]
+        #         curr_rewards = rewards[i]
+        #         curr_actions = actions[i]
+        #         curr_dones = dones[i]
 
-                q_values = model(torch.tensor(curr_state)).detach()
-                target_q_values = model_tar(torch.tensor(curr_next_state)).detach()
-                masked_target_q_values = target_q_values[agents_index]
-                target_q_values = np.array(masked_target_q_values.cpu().data)
-                expected_q = np.array(q_values.cpu().data)
+        #         q_values = model(torch.tensor(curr_state)).detach()
+        #         target_q_values = model_tar(torch.tensor(curr_next_state)).detach()
+        #         masked_target_q_values = target_q_values[agents_index]
+        #         target_q_values = np.array(masked_target_q_values.cpu().data)
+        #         expected_q = np.array(q_values.cpu().data)
 
-                for j in range(len(agents_index)):
-                    expected_q[j][curr_actions[j]] = curr_rewards[j] + (1 - curr_dones) * args.gamma * target_q_values[j][curr_actions[j]]
+        #         for j in range(len(agents_index)):
+        #             expected_q[j][curr_actions[j]] = curr_rewards[j] + (1 - curr_dones) * args.gamma * target_q_values[j][curr_actions[j]]
 
-                #print('temp batch _loss:', (q_values - torch.tensor(expected_q)).pow(2), type((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2)), (q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2).shape)
-                temp_batch_loss = torch.mean((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2))
+        #         #print('temp batch _loss:', (q_values - torch.tensor(expected_q)).pow(2), type((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2)), (q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2).shape)
+        #         temp_batch_loss = torch.mean((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2))
 
-                temp_batch_loss.requires_grad = True
+        #         temp_batch_loss.requires_grad = True
 
-                temp_batch_loss.backward()
+        #         temp_batch_loss.backward()
 
-                batch_loss.append(temp_batch_loss)
-                batch_grads.append(temp_batch_loss.grad)
+        #         batch_loss.append(temp_batch_loss)
+        #         batch_grads.append(temp_batch_loss.grad)
 
 
-            loss = torch.mean(torch.stack(batch_loss))
-            average_gradient = torch.mean(torch.stack(batch_grads), dim=0)
-            optimizer.zero_grad()
-            loss.backward(gradient=average_gradient)
-            optimizer.step()
-            # loss = torch.mean(torch.tensor(batch_loss))
-            # optimizer.zero_grad()
-            # loss.backward()
-            # optimizer.step()
+        #     loss = torch.mean(torch.stack(batch_loss))
+        #     average_gradient = torch.mean(torch.stack(batch_grads), dim=0)
+        #     optimizer.zero_grad()
+        #     loss.backward(gradient=average_gradient)
+        #     optimizer.step()
+        #     # loss = torch.mean(torch.tensor(batch_loss))
+        #     # optimizer.zero_grad()
+        #     # loss.backward()
+        #     # optimizer.step()
 
-            print('I_EPISODE: ' + str(i_episode) + 'LOSS:' + str(loss.item()))
-            with open('./logs/logs.txt', 'a') as f:
+            with open('./logs/loss.txt', 'a') as f:
                 f.write(str(loss.item()) + '\n')
 
             with torch.no_grad():

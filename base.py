@@ -50,16 +50,16 @@ class EnergyPlusRunner:
         # below is declaration of variables, meters and actuators
         # this simulation will interact with
         self.variables = {
-            'var-attic-indoor_temperature': ('Zone Air Temperature', 'Attic'),
-            'var-core_zn-indoor_temperature': ('Zone Air Temperature', 'Core_ZN'),
-            'var-perimeter_zn_1-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_1'),
-            'var-perimeter_zn_2-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_2'),
-            'var-perimeter_zn_3-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_3'),
-            'var-perimeter_zn_4-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_4'),
-            'var_environment_site_outdoor_air_drybulb_temperature': ('Site Outdoor Air Drybulb Temperature', 'Environment'),
-            'var_environment_site_direct_solar_radiation_rate_per_area': ('Site Direct Solar Radiation Rate per Area', 'Environment'),
-            'var_environment_site_horizontal_infrared_radiation_rate_per_area': ('Site Horizontal Infrared Radiation Rate per Area', 'Environment'),
-            'var_environment_site_diffuse_solar_radiation_rate_per_area': ('Site Diffuse Solar Radiation Rate per Area', 'Environment')
+            'var-attic-indoor_temperature': ('Zone Air Temperature', 'Attic'), #0
+            'var-core_zn-indoor_temperature': ('Zone Air Temperature', 'Core_ZN'), #1
+            'var-perimeter_zn_1-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_1'), #2
+            'var-perimeter_zn_2-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_2'), #3
+            'var-perimeter_zn_3-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_3'), #4
+            'var-perimeter_zn_4-indoor_temperature': ('Zone Air Temperature', 'Perimeter_ZN_4'), #5
+            'var_environment_site_outdoor_air_drybulb_temperature': ('Site Outdoor Air Drybulb Temperature', 'Environment'), #6
+            'var_environment_site_direct_solar_radiation_rate_per_area': ('Site Direct Solar Radiation Rate per Area', 'Environment'), #7
+            'var_environment_site_horizontal_infrared_radiation_rate_per_area': ('Site Horizontal Infrared Radiation Rate per Area', 'Environment'), #8
+            'var_environment_site_diffuse_solar_radiation_rate_per_area': ('Site Diffuse Solar Radiation Rate per Area', 'Environment') #9
         }
 
 
@@ -553,6 +553,8 @@ class EnergyPlusEnv(gym.Env):
         reward_energy = self._compute_reward_energy(meter)
         reward_zone_cooling_energy_transfer = self._compute_zone_energy_transfer(meter)
 
+        cost_signal = None
+
 
         # NOTE: changed this to 99 but 100 works fine also
         if self.energyplus_runner.progress_value == 99:
@@ -560,11 +562,7 @@ class EnergyPlusEnv(gym.Env):
             done = True
 
 
-        return obs_vec, reward_zone_cooling_energy_transfer, done, False, {'cooling_core': meter['cooling_core_zn'],
-                                                                           'cooling_perimeter_1': meter['cooling_perimeter_1'],
-                                                                           'cooling_perimeter_2': meter['cooling_perimeter_2'],
-                                                                           'cooling_perimeter_3': meter['cooling_perimeter_3'],
-                                                                           'cooling_perimeter_4': meter['cooling_perimeter_4']}
+        return obs_vec, reward_zone_cooling_energy_transfer, done, False, {'cost_signal': cost_signal}
 
     def render(self, mode="human"):
         # TODO? : maybe add IDF visualization option

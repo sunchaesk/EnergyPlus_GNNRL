@@ -175,7 +175,7 @@
 
   RunPeriod,
     RUNPERIOD 1,             !- Name
-    6,                       !- Begin Month
+    7,                       !- Begin Month
     1,                       !- Begin Day of Month
     ,                        !- Begin Year
     8,                      !- End Month
