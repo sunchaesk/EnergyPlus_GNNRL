@@ -34,7 +34,8 @@ def graph_actuation_time_series(i_episode,
                                 perimeter_zn_2_indoor_temperature,
                                 perimeter_zn_3_indoor_temperature,
                                 perimeter_zn_4_indoor_temperature,
-                                graph=True):
+                                epsilon,
+                                graph=True,):
     start = 100
     end = 1300
     x = list(range(end - start))
@@ -91,8 +92,11 @@ def graph_actuation_time_series(i_episode,
     axs[4].set_title('Perimeter_ZN_4')
     axs[4].legend()
 
+    plt.suptitle('I_EPISODE:' + str(i_episode) + ' EPSILON:' + str(epsilon), fontsize=16)
+
     plt.tight_layout()
 
+    plt.savefig('./logs/save.png')
     if graph and (i_episode % args.print_every == 0) and i_episode != 0:
         plt.show()
 
@@ -248,24 +252,25 @@ def main():
     epsilon = args.epsilon
 
 
-    outdoor_temperature = []
-    price_signal = []
-    core_zn_actuation = []
-    perimeter_zn_1_actuation = []
-    perimeter_zn_2_actuation = []
-    perimeter_zn_3_actuation = []
-    perimeter_zn_4_actuation = []
-    core_zn_indoor_temperature = []
-    perimeter_zn_1_indoor_temperature = []
-    perimeter_zn_2_indoor_temperature = []
-    perimeter_zn_3_indoor_temperature = []
-    perimeter_zn_4_indoor_temperature = []
 
     while i_episode < n_episode:
-        if i_episode > 100:
-            epsilon -= 0.001
-            if episilon < 0.02:
-                epsilon = 0.02
+        outdoor_temperature = []
+        price_signal = []
+        core_zn_actuation = []
+        perimeter_zn_1_actuation = []
+        perimeter_zn_2_actuation = []
+        perimeter_zn_3_actuation = []
+        perimeter_zn_4_actuation = []
+        core_zn_indoor_temperature = []
+        perimeter_zn_1_indoor_temperature = []
+        perimeter_zn_2_indoor_temperature = []
+        perimeter_zn_3_indoor_temperature = []
+        perimeter_zn_4_indoor_temperature = []
+
+        if i_episode > 1:
+            epsilon -= 0.025
+            if epsilon < 0.05:
+                epsilon = 0.025
 
         i_episode += 1
 
@@ -334,7 +339,8 @@ def main():
                                     perimeter_zn_2_indoor_temperature,
                                     perimeter_zn_3_indoor_temperature,
                                     perimeter_zn_4_indoor_temperature,
-                                    graph=True)
+                                    epsilon,
+                                    graph=False)
 
 
         if not buff.buffer_filled_percentage() >= 30:
@@ -343,56 +349,94 @@ def main():
             print('---------------------------')
             continue
 
+
+        # epoch_losses = []
         # for epoch in range(args.n_epoch):
         #     states, edge_indices, actions, rewards, next_states, next_edge_indices, dones = buff.get_batch(args.batch_size)
 
-        #     batch_loss = []
-        #     batch_grads = []
-        #     for i in range(args.batch_size):
-        #         curr_state = states[i]
-        #         curr_next_state = next_states[i]
-        #         curr_edge_indices = edge_indices[i]
-        #         curr_rewards = rewards[i]
-        #         curr_actions = actions[i]
-        #         curr_dones = dones[i]
+        #     # generate mask
+        #     num_rows = len(ZONE_INDEX)
+        #     mask = torch.zeros(num_rows)
+        #     mask[agents_index] = 1
 
-        #         q_values = model(torch.tensor(curr_state)).detach()
-        #         target_q_values = model_tar(torch.tensor(curr_next_state)).detach()
-        #         masked_target_q_values = target_q_values[agents_index]
-        #         target_q_values = np.array(masked_target_q_values.cpu().data)
-        #         expected_q = np.array(q_values.cpu().data)
+        #     q_values = model(torch.Tensor(states))
+        #     target_q_values = model_tar(torch.Tensor(next_states))
+        #     target_q_values = target_q_values - 9e15 * mask.unsqueeze(1)
+        #     target_q_values = target_q_values.max(dim=2)[0]
+        #     target_q_values = np.array(target_q_values.cpu().data)
+        #     expected_q = np.array(q_values.cpu().data)
+        #     for j in range(args.batch_size):
+        #         for i in range(num_agents):
+        #             expected_q[j][i][actions[j][i]] = rewards[j] + (1-dones[j]) * args.gamma * target_q_values[j][i]
 
-        #         for j in range(len(agents_index)):
-        #             expected_q[j][curr_actions[j]] = curr_rewards[j] + (1 - curr_dones) * args.gamma * target_q_values[j][curr_actions[j]]
-
-        #         #print('temp batch _loss:', (q_values - torch.tensor(expected_q)).pow(2), type((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2)), (q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2).shape)
-        #         temp_batch_loss = torch.mean((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2))
-
-        #         temp_batch_loss.requires_grad = True
-
-        #         temp_batch_loss.backward()
-
-        #         batch_loss.append(temp_batch_loss)
-        #         batch_grads.append(temp_batch_loss.grad)
-
-
-        #     loss = torch.mean(torch.stack(batch_loss))
-        #     average_gradient = torch.mean(torch.stack(batch_grads), dim=0)
+        #     loss = (q_values - torch.tensor(expected_q)).pow(2).mean()
         #     optimizer.zero_grad()
-        #     loss.backward(gradient=average_gradient)
+        #     loss.backward()
         #     optimizer.step()
-        #     # loss = torch.mean(torch.tensor(batch_loss))
-        #     # optimizer.zero_grad()
-        #     # loss.backward()
-        #     # optimizer.step()
 
-            with open('./logs/loss.txt', 'a') as f:
-                f.write(str(loss.item()) + '\n')
+        #     epoch_losses.append(loss.item())
 
-            with torch.no_grad():
-                for p, p_targ in zip(model.parameters(), model_tar.parameters()):
-                    p_targ.data.mul_(args.tau)
-                    p_targ.data.add_((1 - args.tau) * p.data)
+        #     with torch.no_grad():
+        #         for p, p_targ in zip(model.parameters(), model_tar.parameters()):
+        #             p_targ.data.mul_(args.tau)
+        #             p_targ.data.add_((1 - args.tau) * p.data)
+
+        # with open('./logs/loss.txt', 'a') as f:
+        #     f.write(str(np.mean(epoch_losses))
+        # + '\n')
+
+
+        epoch_losses = []
+        for epoch in range(args.n_epoch):
+            states, edge_indices, actions, rewards, next_states, next_edge_indices, dones = buff.get_batch(args.batch_size)
+
+            batch_loss = []
+            batch_grads = []
+            for i in range(args.batch_size):
+                curr_state = states[i]
+                curr_next_state = next_states[i]
+                curr_edge_indices = edge_indices[i]
+                curr_rewards = rewards[i]
+                curr_actions = actions[i]
+                curr_dones = dones[i]
+
+                q_values = model(torch.tensor(curr_state)).detach()
+                target_q_values = model_tar(torch.tensor(curr_next_state)).detach()
+                masked_target_q_values = target_q_values[agents_index]
+                target_q_values = np.array(masked_target_q_values.cpu().data)
+                expected_q = np.array(q_values.cpu().data)
+
+                for j in range(len(agents_index)):
+                    expected_q[j][curr_actions[j]] = curr_rewards[j] + (1 - curr_dones) * args.gamma * target_q_values[j][curr_actions[j]]
+
+                #print('temp batch _loss:', (q_values - torch.tensor(expected_q)).pow(2), type((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2)), (q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2).shape)
+                temp_batch_loss = torch.mean((q_values - torch.tensor(expected_q, dtype=torch.float32)).pow(2))
+
+                temp_batch_loss.requires_grad = True
+
+                temp_batch_loss.backward()
+
+                batch_loss.append(temp_batch_loss)
+                batch_grads.append(temp_batch_loss.grad)
+
+
+            loss = torch.mean(torch.stack(batch_loss))
+            average_gradient = torch.mean(torch.stack(batch_grads), dim=0)
+            optimizer.zero_grad()
+            loss.backward(gradient=average_gradient)
+            optimizer.step()
+
+            epoch_losses.append(loss.item())
+            # loss = torch.mean(torch.tensor(batch_loss))
+            # optimizer.zero_grad()
+            # loss.backward()
+            # optimizer.step()
+
+        epoch_loss = sum(epoch_losses) / args.n_epoch
+        print('I_EPISODE:', i_episode, 'EPOCH LOSS:', epoch_loss)
+        with open('./logs/loss.txt', 'a') as f:
+            f.write(str(epoch_loss) + '\n')
+
 
 if __name__ == "__main__":
     main()

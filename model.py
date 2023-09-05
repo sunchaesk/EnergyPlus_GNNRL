@@ -44,7 +44,7 @@ class Encoder(nn.Module):
                     #print('handle to index:', self.handle_to_index)
                     zone_features.append(eplus_obs_vec[self.handle_to_index[variable_handle]])
 
-            feature_matrix.append(np.array(zone_features))
+            feature_matrix.append(zone_features)
 
         return feature_matrix
 
@@ -54,7 +54,10 @@ class Encoder(nn.Module):
         feature x fc = (num_nodes x num_features) x (num_features, hidden_size) = num_nodes x hidden_size
         '''
         feature = self.generate_feature_matrix(eplus_obs_vec)
-        feature = torch.tensor(np.array(feature), dtype=torch.float32)
+        feature = np.array(feature, dtype=np.float32)
+        feature = torch.from_numpy(feature)
+
+        #feature = torch.tensor(np.array(feature), dtype=torch.float32)
         # print('feature:', feature, feature.dim(), feature.shape)
         # print('------')
         # print('features:', end='')

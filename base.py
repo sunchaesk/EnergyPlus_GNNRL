@@ -80,6 +80,8 @@ class EnergyPlusRunner:
             'cooling_perimeter_3': 'Cooling:EnergyTransfer:Zone:PERIMETER_ZN_3',
             'cooling_perimeter_4': 'Cooling:EnergyTransfer:Zone:PERIMETER_ZN_4',
             # 'core_elec': 'Electricity:Core_ZN:HVAC'
+            'energy_transfer_facility': 'EnergyTransfer:Facility',
+            'energy_transfer_building': 'EnergyTransfer:Building'
         }
         self.meter_handles: Dict[str, int] = {}
 
@@ -256,6 +258,9 @@ class EnergyPlusRunner:
         self.next_obs['var-environment-time-day'] = day
         self.next_obs['var-environment-time-hour'] = hour
         self.next_obs['var-environment-time-day_of_week'] = day_of_week
+
+        # cost signal (for demand response)
+
 
         self.obs_queue.put(self.next_obs)
 
@@ -717,11 +722,11 @@ class EnergyPlusEnv(gym.Env):
     @staticmethod
     def _compute_zone_energy_transfer(meter: Dict[str, float]) -> float:
         '''compute cooling energy transfer for each zone'''
-        core_zn_ret = -1 * meter['cooling_core_zn']
-        perimeter_1_ret = -1 * meter['cooling_perimeter_1']
-        perimeter_2_ret = -1 * meter['cooling_perimeter_2']
-        perimeter_3_ret = -1 * meter['cooling_perimeter_3']
-        perimeter_4_ret = -1 * meter['cooling_perimeter_4']
+        core_zn_ret = -1 * meter['cooling_core_zn'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_1_ret = -1 * meter['cooling_perimeter_1'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_2_ret = -1 * meter['cooling_perimeter_2'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_3_ret = -1 * meter['cooling_perimeter_3'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_4_ret = -1 * meter['cooling_perimeter_4'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
         return [core_zn_ret, perimeter_1_ret, perimeter_2_ret, perimeter_3_ret, perimeter_4_ret]
 
 
@@ -758,14 +763,13 @@ if __name__ == "__main__":
 
         while not done:
             action = env.action_space.sample()
-            action = [30,30,30,30,30]
             # print('action:', action)
             # print('actuators:', env.retrieve_actuators())
             ret = n_state, reward, done, truncated, info = env.step(action)
 
-            test += info['cooling_core'] + info['cooling_perimeter_1'] + info['cooling_perimeter_2'] + info['cooling_perimeter_3'] + info['cooling_perimeter_4']
+            test += info['cooling_core_zn'] + info['cooling_perimeter_1'] + info['cooling_perimeter_2'] + info['cooling_perimeter_3'] + info['cooling_perimeter_4']
 
-            score += reward
+            score += sum(reward)
 
         scores.append(score)
         print("SCORES: ", scores)
