@@ -23,6 +23,24 @@ sys.path.insert(0, '/home/ck/Downloads/EnergyPlus-23.1.0-87ed9199d4-Linux-CentOS
 from pyenergyplus.api import EnergyPlusAPI
 from pyenergyplus.datatransfer import DataExchange
 
+BASE_HANDLE_TO_INDEX = {
+    'ATTIC_INDOOR_TEMPERATURE': 0,
+    'CORE_ZN_INDOOR_TEMPERATURE': 1,
+    'PERIMETER_ZN_1_INDOOR_TEMPERATURE': 2,
+    'PERIMETER_ZN_2_INDOOR_TEMPERATURE': 3,
+    'PERIMETER_ZN_3_INDOOR_TEMPERATURE': 4,
+    'PERIMETER_ZN_$_INDOOR_TEMPERATURE': 5,
+    'ENVIRONMENT_OUTDOOR_TEMPERATURE': 6,
+    'ENVIRONMENT_DIRECT_SOLAR_RATE': 7,
+    'ENVIRONMENT_INFRARED_SOLAR_RATE': 8,
+    'ENVIRONMENT_DIFFUSE_SOLAR_RATE': 9,
+    'ENVIRONMENT_MONTH': 10,
+    'ENVIRONMENT_DAY': 11,
+    'ENVIRONMENT_HOUR': 12,
+    'ENVIRONMENT_DAY_OF_WEEK': 13,
+    'ENVIRONMENT_COST_SIGNAL': 14,
+}
+
 
 class EnergyPlusRunner:
 
@@ -260,7 +278,21 @@ class EnergyPlusRunner:
         self.next_obs['var-environment-time-day_of_week'] = day_of_week
 
         # cost signal (for demand response)
-
+        cost_rate = None
+        if day_of_week in [1, 7]:
+            # weekend pricing
+            if hour in range(0, 7) or hour in range(23, 24 + 1): # plus one is to include 7
+                cost_rate = 2.4
+            elif hour in range(7, 23):
+                cost_rate = 7.4
+        else:
+            if hour in range(0, 7) or hour in range(23, 24 + 1):
+                cost_rate = 2.4
+            elif hour in range(7, 16) or hour in range(21, 23):
+                cost_rate = 10.2
+            elif hour in range(16, 21):
+                cost_rate = 24.0
+        self.next_obs['var-environment-cost_rate'] = cost_rate
 
         self.obs_queue.put(self.next_obs)
 
@@ -557,17 +589,19 @@ class EnergyPlusEnv(gym.Env):
         # compute energy reward
         reward_energy = self._compute_reward_energy(meter)
         reward_zone_cooling_energy_transfer = self._compute_zone_energy_transfer(meter)
+        reward_zone_cooling_energy_transfer_cost = self._compute_zone_energy_transfer_cost(meter, obs[BASE_HANDLE_TO_INDEX]['ENVIRONMENT_COST_SIGNAL'])
 
-        cost_signal = None
+        # change reward here
+        reward = reward_zone_cooling_energy_transfer_cost
 
+        cost_signal = obs[BASE_HANDLE_TO_INDEX['ENVIRONMENT_COST_SIGNAL']]
 
         # NOTE: changed this to 99 but 100 works fine also
         if self.energyplus_runner.progress_value == 99:
             print("reached end of simulation")
             done = True
 
-
-        return obs_vec, reward_zone_cooling_energy_transfer, done, False, {'cost_signal': cost_signal}
+        return obs_vec, reward, done, False, {'cost_signal': cost_signal}
 
     def render(self, mode="human"):
         # TODO? : maybe add IDF visualization option
@@ -722,12 +756,25 @@ class EnergyPlusEnv(gym.Env):
     @staticmethod
     def _compute_zone_energy_transfer(meter: Dict[str, float]) -> float:
         '''compute cooling energy transfer for each zone'''
-        core_zn_ret = -1 * meter['cooling_core_zn'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_1_ret = -1 * meter['cooling_perimeter_1'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_2_ret = -1 * meter['cooling_perimeter_2'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_3_ret = -1 * meter['cooling_perimeter_3'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_4_ret = -1 * meter['cooling_perimeter_4'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        core_zn = -1 * meter['cooling_core_zn'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_1 = -1 * meter['cooling_perimeter_1'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_2 = -1 * meter['cooling_perimeter_2'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_3 = -1 * meter['cooling_perimeter_3'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_4 = -1 * meter['cooling_perimeter_4'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
         return [core_zn_ret, perimeter_1_ret, perimeter_2_ret, perimeter_3_ret, perimeter_4_ret]
+
+    @staticmethod
+    def _compute_zone_energy_transfer_cost(meter: Dict[str, float], timestep_cost_signal) -> float:
+        zone_energy_transfer_joules = self._compute_zone_energy_transfer(meter)
+        # NOTE: optional scaling factor
+        scaling_factor = 1
+        zone_energy_transfer_joules = [scaling_factor * zone_energy_transfer_joule for zone_energy_transfer_joule in zone_energy_transfer_joules]
+        return [timestep_cost_signal * zone_energy_transfer_joule for zone_energy_transfer_joule in zone_energy_transfer_joules]
+
+    @staticmethod
+    def _compute_timestep_cost_signal(meter: Dict[str. float]) -> float:
+        pass
+
 
 
 # NOTE: have to give in -x flag
@@ -739,8 +786,8 @@ class EnergyPlusEnv(gym.Env):
 #                 'num_workers': 2
 #                 }
 
-default_args = {'idf': './in.idf',
-                'epw': './weather.epw',
+default_args = {'idf': './IDF/in.idf',
+                'epw': './IDF/weather.epw',
                 'csv': False,
                 'output': './output',
                 'timesteps': 1000000.0,

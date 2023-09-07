@@ -118,6 +118,7 @@ parser.add_argument("-layer_size", type=int, default=256, help="Number of nodes 
 parser.add_argument("-gcn_hidden", type=int, default=256, help="Dimension of the hidden representation of the GCN layer")
 parser.add_argument("-repm", "--replay_memory", type=int, default=int(5e4), help="Size of the Replay memory, default is 1e6")
 parser.add_argument("--print_every", type=int, default=2, help="Prints every x episodes the average reward over x episodes")
+parser.add_argument("--save_every", type=int, default=2, help="Prints every x episodes the average reward over x episodes")
 parser.add_argument("-bs", "--batch_size", type=int, default=256, help="Batch size, default is 256")
 parser.add_argument("-n_epoch", type=int, default=5, help="Epoch size, default is 5")
 parser.add_argument("-t", "--tau", type=float, default=0.96, help="Softupdate factor tau, default is 1e-2")
@@ -157,18 +158,19 @@ HANDLE_TO_INDEX = {
     'var-environment-time-month': 10,
     'var-environment-time-day': 11,
     'var-environment-time-hour': 12,
-    'var-environment-time-day_of_week': 13
+    'var-environment-time-day_of_week': 13,
+    'var-environment-cost_rate': 14,
 }
 
 ZONE_TO_VARIABLES = {
-    'Outdoors': ['var_environment_site_outdoor_air_drybulb_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
-    'Attic': ['var-attic_indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
-    'Core_ZN': ['var-core_zn_indoor_temperature', 0, 0, 0, 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
-    'Perimeter_ZN_1': ['var-perimeter_zn_1-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
-    'Perimeter_ZN_2': ['var-perimeter_zn_2-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
-    'Perimeter_ZN_3': ['var-perimeter_zn_3-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
-    'Perimeter_ZN_4': ['var-perimeter_zn_4-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
-    'Perimeter_ZN_4': ['var-perimeter_zn_4-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week'],
+    'Outdoors': ['var_environment_site_outdoor_air_drybulb_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
+    'Attic': ['var-attic_indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
+    'Core_ZN': ['var-core_zn_indoor_temperature', 0, 0, 0, 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
+    'Perimeter_ZN_1': ['var-perimeter_zn_1-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
+    'Perimeter_ZN_2': ['var-perimeter_zn_2-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
+    'Perimeter_ZN_3': ['var-perimeter_zn_3-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
+    'Perimeter_ZN_4': ['var-perimeter_zn_4-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
+    'Perimeter_ZN_4': ['var-perimeter_zn_4-indoor_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
 } # variables handles associated for each zone
 
 ZONE_INDEX = {
@@ -205,7 +207,7 @@ def main():
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.nvec[0] # returns value of discrete. action space is defined in multivariate
 
-    num_features = 8
+    num_features = len(ZONE_TO_VARIABLES[list(ZONE_TO_VARIABLES.keys())[0]])
     num_agents = 5
     agents_index = [2,3,4,5,6] # zone indices with controllable agents
 
@@ -268,8 +270,8 @@ def main():
         perimeter_zn_4_indoor_temperature = []
 
         if i_episode > 1:
-            epsilon -= 0.025
-            if epsilon < 0.05:
+            epsilon -= 0.015
+            if epsilon < 0.025:
                 epsilon = 0.025
 
         i_episode += 1
@@ -325,6 +327,18 @@ def main():
         print('----------------------------------')
         with open('./logs/logs.txt', 'a') as f:
             f.write(str(score) + '\n')
+
+        if i_episode % args.save_every == 0 and i_episode != 0:
+            # save current model
+            print('##################')
+            print('MODEL SAVE I_EPISODE:', i_episode)
+            print('##################')
+            torch.save({
+                'episode': i_episode,
+                'model_state_dict': model.state_dict(),
+                'model_tar_state_dict': model_tar.state_dict(),
+                'optimizer': optimizer.state_dict()
+            }, './model/checkpoint.pt')
 
         graph_actuation_time_series(i_episode,
                                     outdoor_temperature,
