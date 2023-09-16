@@ -3,3 +3,4 @@ output
 parsetab.py
 parser.out
 logs/
+model/

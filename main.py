@@ -109,9 +109,9 @@ def graph_actuation_time_series(i_episode,
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-idf", type=str, default="./in.idf", help="IDF file location")
 parser.add_argument("-eplus_weather_file", type=str, default='./weather.epw', help="Weather file")
-parser.add_argument("-ep", type=int, default=100, help="The amount of training episodes, default is 100")
+parser.add_argument("-ep", type=int, default=10000, help="The amount of training episodes, default is 100")
 parser.add_argument("-seed", type=int, default=0, help="Seed for the env and torch network weights, default is 0")
-parser.add_argument("-lr", type=float, default=1e-5, help="Learning rate of adapting the network weights, default is 5e-4")
+parser.add_argument("-lr", type=float, default=1e-3, help="Learning rate of adapting the network weights, default is 5e-4")
 parser.add_argument("-a", "--alpha", type=float,default=0.1, help="entropy alpha value, if not choosen the value is leaned by the agent")
 parser.add_argument("-encoder_hidden", type=int, default=256, help="Dimension of the hidden representation encoded by the MLP encoder layer")
 parser.add_argument("-layer_size", type=int, default=256, help="Number of nodes per neural network layer, default is 256")
@@ -160,7 +160,7 @@ HANDLE_TO_INDEX = {
     'var-environment-time-hour': 12,
     'var-environment-time-day_of_week': 13,
     'var-environment-cost_rate': 14,
-}
+} # 15
 
 ZONE_TO_VARIABLES = {
     'Outdoors': ['var_environment_site_outdoor_air_drybulb_temperature', 'var_environment_site_direct_solar_radiation_rate_per_area', 'var_environment_site_diffuse_solar_radiation_rate_per_area', 'var_environment_site_horizontal_infrared_radiation_rate_per_area', 'var-environment-time-month', 'var-environment-time-day', 'var-environment-time-hour', 'var-environment-time-day_of_week', 'var-environment-cost_rate'],
@@ -253,6 +253,18 @@ def main():
     total_steps = 0
     epsilon = args.epsilon
 
+    load = True
+    if load:
+        try:
+            checkpoint = torch.load('./model/checkpoint.pt')
+            model.load_state_dict(checkpoint['model_state_dict'])
+            model_tar.load_state_dict(checkpoint['model_tar_state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            i_episode = checkpoint['episode']
+        except:
+            print('ERROR loading ./model/checkpoint.pt... starting from scratch')
+
+
 
 
     while i_episode < n_episode:
@@ -270,9 +282,9 @@ def main():
         perimeter_zn_4_indoor_temperature = []
 
         if i_episode > 1:
-            epsilon -= 0.015
-            if epsilon < 0.025:
-                epsilon = 0.025
+            epsilon -= 0.007
+            if epsilon < 0.01:
+                epsilon = 0.01
 
         i_episode += 1
 
@@ -301,7 +313,7 @@ def main():
             next_state, reward, done, truncated, info = env.step(action=action)
             buff.add(state, EDGE_INDEX, action, reward, next_state, EDGE_INDEX, done)
 
-            score += -1 * sum(reward)
+            score += -1 * sum(info['reward_zone_cooling_energy_transfer'])
 
 
             # for graphing time series

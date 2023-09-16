@@ -29,7 +29,7 @@ BASE_HANDLE_TO_INDEX = {
     'PERIMETER_ZN_1_INDOOR_TEMPERATURE': 2,
     'PERIMETER_ZN_2_INDOOR_TEMPERATURE': 3,
     'PERIMETER_ZN_3_INDOOR_TEMPERATURE': 4,
-    'PERIMETER_ZN_$_INDOOR_TEMPERATURE': 5,
+    'PERIMETER_ZN_4_INDOOR_TEMPERATURE': 5,
     'ENVIRONMENT_OUTDOOR_TEMPERATURE': 6,
     'ENVIRONMENT_DIRECT_SOLAR_RATE': 7,
     'ENVIRONMENT_INFRARED_SOLAR_RATE': 8,
@@ -589,19 +589,23 @@ class EnergyPlusEnv(gym.Env):
         # compute energy reward
         reward_energy = self._compute_reward_energy(meter)
         reward_zone_cooling_energy_transfer = self._compute_zone_energy_transfer(meter)
-        reward_zone_cooling_energy_transfer_cost = self._compute_zone_energy_transfer_cost(meter, obs[BASE_HANDLE_TO_INDEX]['ENVIRONMENT_COST_SIGNAL'])
+        reward_zone_cooling_energy_transfer_cost = self._compute_zone_energy_transfer_cost(meter, obs)
+        scaled_reward_zone_cooling_energy_transfer_cost = [single_reward_zone_cooling_energy_transfer_cost / 10000 for single_reward_zone_cooling_energy_transfer_cost in reward_zone_cooling_energy_transfer_cost]
+        scaled_reward_zone_cooling_energy_transfer = [single_reward_zone_cooling_energy_transfer / 10000 for single_reward_zone_cooling_energy_transfer in reward_zone_cooling_energy_transfer]
 
         # change reward here
-        reward = reward_zone_cooling_energy_transfer_cost
-
-        cost_signal = obs[BASE_HANDLE_TO_INDEX['ENVIRONMENT_COST_SIGNAL']]
+        #reward = (reward_zone_cooling_energy_transfer_cost / 10000)
+        reward = scaled_reward_zone_cooling_energy_transfer
+        cost_signal = obs['var-environment-cost_rate']
 
         # NOTE: changed this to 99 but 100 works fine also
         if self.energyplus_runner.progress_value == 99:
             print("reached end of simulation")
             done = True
 
-        return obs_vec, reward, done, False, {'cost_signal': cost_signal}
+        return obs_vec, reward, done, False, {'cost_signal': cost_signal,
+                                              'reward_zone_cooling_energy_transfer': tuple(reward_zone_cooling_energy_transfer),
+                                              'reward_zone_cooling_energy_transfer_cost': tuple(reward_zone_cooling_energy_transfer_cost)}
 
     def render(self, mode="human"):
         # TODO? : maybe add IDF visualization option
@@ -756,15 +760,16 @@ class EnergyPlusEnv(gym.Env):
     @staticmethod
     def _compute_zone_energy_transfer(meter: Dict[str, float]) -> float:
         '''compute cooling energy transfer for each zone'''
-        core_zn = -1 * meter['cooling_core_zn'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_1 = -1 * meter['cooling_perimeter_1'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_2 = -1 * meter['cooling_perimeter_2'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_3 = -1 * meter['cooling_perimeter_3'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
-        perimeter_4 = -1 * meter['cooling_perimeter_4'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        core_zn_ret = -1 * meter['cooling_core_zn'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_1_ret = -1 * meter['cooling_perimeter_1'] # + meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_2_ret = -1 * meter['cooling_perimeter_2'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_3_ret = -1 * meter['cooling_perimeter_3'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
+        perimeter_4_ret = -1 * meter['cooling_perimeter_4'] #+ meter['energy_transfer_facility'] + meter['energy_transfer_building']
         return [core_zn_ret, perimeter_1_ret, perimeter_2_ret, perimeter_3_ret, perimeter_4_ret]
 
-    @staticmethod
-    def _compute_zone_energy_transfer_cost(meter: Dict[str, float], timestep_cost_signal) -> float:
+    #@staticmethod
+    def _compute_zone_energy_transfer_cost(self, meter: Dict[str, float], obs: list) -> float:
+        timestep_cost_signal = obs['var-environment-cost_rate']
         zone_energy_transfer_joules = self._compute_zone_energy_transfer(meter)
         # NOTE: optional scaling factor
         scaling_factor = 1
@@ -772,7 +777,7 @@ class EnergyPlusEnv(gym.Env):
         return [timestep_cost_signal * zone_energy_transfer_joule for zone_energy_transfer_joule in zone_energy_transfer_joules]
 
     @staticmethod
-    def _compute_timestep_cost_signal(meter: Dict[str. float]) -> float:
+    def _compute_timestep_cost_signal(meter: Dict[str, float]) -> float:
         pass
 
 
